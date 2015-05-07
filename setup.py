@@ -6,10 +6,7 @@
 
 from setuptools import setup
 
-# from syncthing import version_num, syncthing_version_num
-
-version_num = '0.0.4'
-syncthing_version_num = '0.11.2'
+from syncthing import version_num, syncthing_version_num
 
 setup(
     name = 'syncthing',
