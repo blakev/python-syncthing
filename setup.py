@@ -44,5 +44,4 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Topic :: System :: Archiving :: Mirroring'
     ],
-    test_suite = 'tests'
 )
