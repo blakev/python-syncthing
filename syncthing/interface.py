@@ -7,6 +7,7 @@ import json
 import warnings
 import logging
 
+import six
 import requests
 from requests.packages.urllib3 import exceptions
 from bunch import Bunch
@@ -18,13 +19,21 @@ VERB_SWAPS = {
     'PUT': 'put'
 }
 
-# sys.version_info(major=2, minor=7, micro=9, releaselevel='final', serial=0)
-PY_MAJOR, PY_MINOR, PY_MICRO = sys.version_info[:3]
-
-if PY_MAJOR == 2:
+if six.PY2:
     import urlparse as uparse
-else:
+    import codecs
+
+    _u = lambda x: codecs.unicode_escape_decode(x)[0]
+    _s = lambda x: x
+elif six.PY3:
     import urllib.parse as uparse
+
+    _u = lambda x: x
+    _s = lambda x: x.decode('utf-8')
+else:
+    raise EnvironmentError('Unknown python major version.')
+
+
 
 MIN_TIMEOUT_SECS = 0.5
 
@@ -38,7 +47,7 @@ class Interface(object):
             ssl_cert_file: str = None):
 
         if is_https and ssl_cert_file is None:
-            raise EnvironmentError('Cannot require https connection without ssl key.')
+            warnings.warn('Using HTTPS without specified ssl_cert_file.')
 
         self.api_key = api_key
         self.host = host
@@ -54,18 +63,26 @@ class Interface(object):
             'X-API-Key': self.api_key
         }
 
+        self.last_request = None
+
     @property
     def root(self):
         return '%s://%s:%d' % (self.protocol, self.host, self.port)
 
     @property
     def is_connected(self):
-        return requests.request(
-            'GET',
-            self.root,
-            timeout = 2.0,
-            verify = self.verify,
-            cert = self.cert).status_code == 200
+        if not self.last_request:
+            self.req('/', 'GET')
+
+        return self.last_request
+
+    @staticmethod
+    def from_json(json_str):
+        pass
+
+    @staticmethod
+    def from_dict(d):
+        pass
 
     def to_json(self):
         pass
@@ -77,8 +94,6 @@ class Interface(object):
             raise UserWarning('Unsupported HTTP verb in REST request.')
 
         the_url = uparse.urljoin(self.root, endpoint)
-
-        print(the_url)
 
         try:
             with warnings.catch_warnings():
@@ -92,9 +107,15 @@ class Interface(object):
                     cert = self.cert,
                     headers = self.req_headers)
         except requests.RequestException as e:
+            self.last_request = False
             raise
         else:
-            return Bunch(resp.json())
+            self.last_request = resp.status_code == 200
+
+            if 'json' in resp.headers.get('content-type', 'text/plain').lower():
+                return Bunch(resp.json())
+            else:
+                return resp
 
 
 
