@@ -3,7 +3,7 @@
 #
 # Created by: Blake on 5/7/2015 at 11:54 AM
 
-VERSION = (0, 0, 4)
+VERSION = (0, 1, 0)
 SYNCTHING_VERSION = (0, 11, 2)
 
 from .interface import Interface
