@@ -21,8 +21,9 @@ setup(
     license = 'The MIT License',
 
     install_requires = [
-        'requests',
-        'bunch'
+        'bunch>=1.0.0',
+        'requests>=2.6',
+        'six>=1.9.0'
     ],
     packages = [
         'syncthing'
@@ -39,6 +40,8 @@ setup(
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
