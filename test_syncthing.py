@@ -5,7 +5,7 @@
 
 import unittest
 
-from syncthing import Interface
+from syncthing import Interface, Syncthing
 
 try:
     from syncthing import private_settings as settings
@@ -18,6 +18,9 @@ class SyncthingInterfaceTestCase(unittest.TestCase):
     def setUp(self):
         self.i = Interface(None)
         self.xi = Interface(settings.API_KEY, port=settings.PORT)
+
+    def test_interface_default(self):
+        Interface
 
     def test_interface_properties(self):
         assert self.i.root
@@ -34,3 +37,9 @@ class SyncthingInterfaceTestCase(unittest.TestCase):
     def test_interface_ping(self):
         assert self.xi.req('/rest/system/ping', 'GET').ping == 'pong'
         assert self.xi.req('/rest/system/ping', 'POST').ping == 'pong'
+
+class SyncthingSyncthingTestCase(unittest.TestCase):
+    _multiprocess_can_split_ = True
+
+    def test_syncthing_default(self):
+        Syncthing
