@@ -44,6 +44,9 @@ class SyncthingType(type):
     def __init__(cls, name, bases, clsdict):
         super(SyncthingType, cls).__init__(name, bases, clsdict)
 
+        if hasattr(cls, 'imported'):
+            return
+
         cls.actions = REST_HOOK_REGEX.findall(rest_md)
 
         # start at the beginning of the MD file for docstring searches
@@ -76,6 +79,9 @@ class SyncthingType(type):
             code = cls._make_req(act_method, act, verb, docstring)
             exec(code, globals(), clsdict)
             setattr(cls, act_method, clsdict[act_method])
+
+        if not hasattr(cls, 'imported'):
+            cls.imported = True
 
 
 class Syncthing(with_metaclass(SyncthingType, object)):
