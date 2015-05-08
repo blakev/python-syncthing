@@ -6,8 +6,8 @@
 VERSION = (0, 1, 0)
 SYNCTHING_VERSION = (0, 11, 2)
 
-from syncthing.interface import Interface
-from syncthing.syncthing import Syncthing
+from .interface import Interface
+from .syncthing import Syncthing
 
 v_str = lambda s: '.'.join(map(str, s))
 
