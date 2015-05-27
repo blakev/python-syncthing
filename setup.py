@@ -3,10 +3,17 @@
 #
 # Created by: Blake on 5/7/2015 at 11:57 AM
 
-
+import os
 from setuptools import setup
 
-from syncthing import version_num, syncthing_version_num
+v_str = lambda s: '.'.join(map(str, s))
+with open('VERSION', 'r') as version_file:
+    version_string = version_file.readline().strip()
+
+version, syncthing_version = version_string.split('|')
+
+version_num = v_str(eval(version))
+syncthing_version_num = v_str(eval(syncthing_version))
 
 setup(
     name = 'syncthing',
