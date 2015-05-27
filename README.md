@@ -18,7 +18,17 @@ beginning with the word `set_`, and allow arguments to be passed similarly as th
 ## Quickstart
 
 ```python
+from syncthing.interface import get_latest_documentation
 from syncthing import Interface, Syncthing
+
+# this will download the REST API markdown from github
+# and store it in a cache folder located in syncthing/docs.
+# when called explicitly it will update to the newest version
+# of the REST API, overwriting the old binding documentation.
+# otherwise, the Syncthing meta class will download the latest
+# documentation on first run, and use that as its bound version
+# until it's explicitly updated.
+get_latest_documentation()
 
 sync_interface = Interface(
     'my api key',
