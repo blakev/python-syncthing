@@ -15,6 +15,11 @@ These bindings use Meta classes to create dynamic bindings based on the latest d
 `GET` methods are returned as a Bunch dot-dictionary, and are bound to the `Syncthing` object as properties. `POST` calls are bound as methods to `Syncthing`,
 beginning with the word `set_`, and allow arguments to be passed similarly as they would in the HTTP header.
 
+
+**WARNING:** python-syncthing uses an offline cache to story the REST API that it retrieves from the parent github. If the python process does not have write privledges
+the first time the cache is synced it will fail with a permission error. To remedy this, before running `import syncthing` for the first time, run `sudo python -c "import syncthing"`
+from the commandline to pre-cache the api. The REST API version for the targetting Syncthing version will be included by default, however. (v0.11.6)
+
 ## Quickstart
 
 ```python
