@@ -3,6 +3,7 @@
 #
 # Created by: Blake on 5/7/2015 at 12:59 PM
 
+import os
 import re
 import inspect
 from functools import wraps
@@ -10,8 +11,11 @@ from functools import wraps
 from six import with_metaclass
 from bunch import Bunch
 
-from .interface import VERB_SWAPS as verb_swap
-from .data import rest_md
+from .interface import (
+    get_latest_documentation,
+    VERB_SWAPS as verb_swap,
+    DEFAULT_CACHE_FOLDER, API_FILENAME
+)
 
 DOC_TOKEN = '###'
 CODE_BLOCK_REGEX = re.compile(r'```.*')
@@ -48,6 +52,13 @@ class SyncthingType(type):
 
         if hasattr(cls, 'imported'):
             return
+
+        ins_file = os.path.join(DEFAULT_CACHE_FOLDER, API_FILENAME % 'latest')
+        if not os.path.exists(ins_file):
+            ins_file = get_latest_documentation()
+
+        with open(ins_file, 'r') as ins_documentation:
+            rest_md = ''.join(ins_documentation.readlines())
 
         cls.actions = REST_HOOK_REGEX.findall(rest_md)
 
