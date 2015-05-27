@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # Created by: Blake on 5/7/2015 at 3:42 PM
-
+import os
 import unittest
 
 from syncthing import Interface, Syncthing
@@ -11,6 +11,13 @@ try:
     from syncthing import private_settings as settings
 except ImportError:
     from syncthing import test_settings as settings
+
+class SyncthingInterfaceGetDocumentationTestCase(unittest.TestCase):
+    def test_get_latest_documentation(self):
+        from syncthing.interface import get_latest_documentation
+
+        assert os.path.exists(get_latest_documentation())
+        assert os.path.exists(get_latest_documentation(as_version='UNITTEST'))
 
 class SyncthingInterfaceTestCase(unittest.TestCase):
     _multiprocess_can_split_ = True

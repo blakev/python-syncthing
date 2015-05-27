@@ -41,7 +41,7 @@ def get_latest_documentation(
     if not os.path.exists(cache_folder):
         os.makedirs(cache_folder)
 
-    cachefile = os.path.join(cache_folder, API_FILENAME % 'latest' if not as_version else as_version)
+    cachefile = os.path.join(cache_folder, API_FILENAME % ('latest' if not as_version else as_version))
 
     if os.path.exists(cachefile):
         shutil.copyfile(cachefile, cachefile + '_old')
