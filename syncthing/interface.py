@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 #
 # Created by: Blake on 5/7/2015 at 12:13 PM
+import os
+import re
 import sys
 import json
+import shutil
 import warnings
 import logging
 
@@ -27,6 +30,54 @@ VERB_SWAPS = {
 }
 
 MIN_TIMEOUT_SECS = 0.5
+DEFAULT_CACHE_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'docs')
+API_FILENAME = 'api_%s.md'
+
+def get_latest_documentation(
+        url = None,
+        as_version = None,
+        cache_folder = DEFAULT_CACHE_FOLDER):
+
+    if not os.path.exists(cache_folder):
+        os.makedirs(cache_folder)
+
+    cachefile = os.path.join(cache_folder, API_FILENAME % 'latest' if not as_version else as_version)
+
+    if os.path.exists(cachefile):
+        shutil.copyfile(cachefile, cachefile + '_old')
+
+    if url is None:
+        url = r'https://github.com/syncthing/docs/tree/gh-pages/_rest'
+
+    print('Getting latest documentation..')
+
+    build_out = ''
+    raw_page_prefix = 'https://raw.githubusercontent.com'
+    stub_regex = re.compile(r'href=\"(?P<doc_url>/syncthing/docs/blob/gh-pages/_rest/(?P<doc_name>\S+)\.md)\"', re.I)
+    page_html = requests.get(url).text
+
+    for fullpath, filename in stub_regex.findall(page_html):
+        print('...grabbing: ' + filename)
+
+        fname = filename.split('-')
+        markdown_page = raw_page_prefix + fullpath.replace('/blob', '')
+
+        # get the markdown data from the github url
+        resp = requests.get(markdown_page).text
+
+        build_out += '''
+### {verb} {endpoint}
+
+{raw}
+        '''.format(
+            verb = fname[-1].upper(),
+            endpoint = 'rest/' + '/'.join(fname[0:-1]),
+            raw = resp.strip()).strip()
+
+
+    with open(cachefile, 'w') as out_file:
+        out_file.write(build_out)
+    return cachefile
 
 class Interface(object):
     """HTTP Interface for the Syncthing REST protocol.
