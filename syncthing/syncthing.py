@@ -4,13 +4,14 @@
 # Created by: Blake on 5/7/2015 at 12:59 PM
 
 import re
+import inspect
 from functools import wraps
 
 from six import with_metaclass
 from bunch import Bunch
 
-from interface import VERB_SWAPS as verb_swap
-from data import rest_md
+from .interface import VERB_SWAPS as verb_swap
+from .data import rest_md
 
 DOC_TOKEN = '###'
 CODE_BLOCK_REGEX = re.compile(r'```.*')
@@ -19,7 +20,8 @@ REST_HOOK_REGEX = re.compile(r'###\W+(?P<verb>\S+)\W+(?P<endpoint>.+)', re.I)
 METHOD_STRING = '''
 {modifiers}
 def {method}(self, **kwargs):
-    """{docstring}"""
+    """{docstring}
+    """
     kwargs = self._check_method_warnings("{method}", kwargs)
     return self._interface.req("rest{endpoint}", "{verb}", **kwargs)'''.strip()
 
@@ -63,13 +65,13 @@ class SyncthingType(type):
             start_doc = rest_md.find(DOC_TOKEN, last_doc_find) + len(DOC_TOKEN)
             end_doc = rest_md.find(DOC_TOKEN, start_doc + len(DOC_TOKEN))
             # increment to start at the end of the previous docstring found
-            last_doc_find = end_doc + len(DOC_TOKEN)
+            last_doc_find = end_doc
 
             # remove all of the code block identifiers, such as bash and json
             docstring = CODE_BLOCK_REGEX.sub('', rest_md[start_doc:end_doc]).strip()
 
-            # remove all the xtra newlines
-            docstring = re.sub(r'[\n]+', '\n', docstring)
+            # remove all the extra newlines
+            docstring = re.sub(r'[\n]+', '\n', docstring).strip()
 
             # create the method names
             act_pieces = [verb_swap[verb]] + act.split('/')[1:]
@@ -90,6 +92,11 @@ class Syncthing(with_metaclass(SyncthingType, object)):
         self._warning_methods = list(WARNING_METHODS)
 
     def _check_method_warnings(self, method_name, kwargs_obj):
+        """Checker that's executed in each dynamically created method to
+        determine if `force=True` and can execute the REST call or not.
+
+        This is used as a stop-gate for methods that may "break" the
+        connected Syncthing instance; such as resetting the database."""
         if method_name not in self._warning_methods:
             return kwargs_obj
 
@@ -100,6 +107,7 @@ class Syncthing(with_metaclass(SyncthingType, object)):
             return kwargs_obj
 
     def add_warning_method(self, method_name):
+        """Adds a warning method from this class, which requires `force=True` to execute"""
         if method_name in self._warning_methods or method_name.startswith('__'):
             return
 
@@ -107,19 +115,47 @@ class Syncthing(with_metaclass(SyncthingType, object)):
             self._warning_methods.append(method_name)
 
     def remove_warning_method(self, method_name):
+        """Removes a method from this class' warning methods, no longer requires `force=True`"""
         if method_name in self._warning_methods:
             self._warning_methods.remove(method_name)
 
+    @classmethod
+    def help(cls, method_name):
+        """Returns the docstring of a dynamically generated method"""
+        if method_name == '__all__':
+            return [x for x in dir(cls) if not x.startswith('__')]
+
+        if hasattr(cls, method_name):
+            return inspect.getdoc(getattr(cls, method_name, None))
+
     @property
     def connected(self):
+        """Returns if the underlying interface is connected"""
         return self._interface.is_connected
 
     @property
+    def methods(self):
+        """Returns the available methods after binding from the documentation"""
+        return list(filter(lambda x: not x.startswith('_'), dir(self)))
+
+    @property
+    def get_methods(self):
+        """Returns all the GET methods in the REST API"""
+        return [x for x in self.methods if not x.startswith('set_')]
+
+    @property
+    def set_methods(self):
+        """Returns all the POST methods in the REST API"""
+        return [x for x in self.methods if x.startswith('set_') and x != 'set_methods']
+
+    @property
     def warning_methods(self):
+        """Returns a list of all the methods which require `force=True` to execute"""
         return self._warning_methods
 
     @property
     def custom_warning_methods(self):
+        """Returns a set of all the warning_methods added programmatically"""
         return set(self._warning_methods).difference(set(WARNING_METHODS))
 
 
