@@ -28,8 +28,8 @@ setup(
     license = 'The MIT License',
 
     install_requires = [
-        'bunch>=1.0.0',
-        'requests>=2.6',
+        'bunch>=1.0.1',
+        'requests>=2.7',
         'six>=1.9.0'
     ],
     packages = [
