@@ -1,6 +1,7 @@
 # local
 .idea
 syncthing/private_*
+syncthing/settings/local*
 scratch.py
 
 # Byte-compiled / optimized / DLL files

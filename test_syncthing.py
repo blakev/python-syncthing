@@ -5,12 +5,19 @@
 import os
 import unittest
 
+from six import print_
+
 from syncthing import Interface, Syncthing
+from syncthing.settings import default as settings
 
 try:
-    from syncthing import private_settings as settings
-except ImportError:
-    from syncthing import test_settings as settings
+    from syncthing.settings import local as local_settings
+except ImportError as e:
+    pass
+else:
+    settings.__dict__.update(local_settings.__dict__)
+    del local_settings
+
 
 class SyncthingInterfaceGetDocumentationTestCase(unittest.TestCase):
     def test_get_latest_documentation(self):
