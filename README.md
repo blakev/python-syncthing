@@ -1,75 +1,13 @@
 # python-syncthing
 
-Python bindings to the Syncthing REST interface. Supports Python 2 and Python 3 (via [six](http://pythonhosted.org//six/)).
+![downloads/month](https://img.shields.io/pypi/dm/syncthing.svg)
+
+Python bindings to the Syncthing REST interface.
 
 [Syncthing](https://syncthing.net/)
 
-[Syncthing REST Documentation](https://github.com/syncthing/syncthing/wiki/REST-Interface)
+[Syncthing REST Documentation](http://docs.syncthing.net/dev/rest.html)
 
 ```bash
 pip install syncthing
 ```
-
-These bindings use Meta classes to create dynamic bindings based on the latest documentation of the Synthing REST API on their github repository.
-
-`GET` methods are returned as a Bunch dot-dictionary, and are bound to the `Syncthing` object as properties. `POST` calls are bound as methods to `Syncthing`,
-beginning with the word `set_`, and allow arguments to be passed similarly as they would in the HTTP header.
-
-
-**WARNING:** python-syncthing uses an offline cache to story the REST API that it retrieves from the parent github. If the python process does not have write privledges
-the first time the cache is synced it will fail with a permission error. To remedy this, before running `import syncthing` for the first time, run `sudo python -c "import syncthing"`
-from the commandline to pre-cache the api. The REST API version for the targetting Syncthing version will be included by default, however. (v0.11.6)
-
-## Quickstart
-
-```python
-from syncthing.interface import get_latest_documentation
-from syncthing import Interface, Syncthing
-
-# this will download the REST API markdown from github
-# and store it in a cache folder located in syncthing/docs.
-# when called explicitly it will update to the newest version
-# of the REST API, overwriting the old binding documentation.
-# otherwise, the Syncthing meta class will download the latest
-# documentation on first run, and use that as its bound version
-# until it's explicitly updated.
-get_latest_documentation()
-
-sync_interface = Interface(
-    'my api key',
-    host = 'localhost',
-    port = 'syncthing port',
-    timeout = 5.0,            # seconds
-    is_https = False
-)
-
-sync = Syncthing(sync_interface)
-
-print(sync.methods)           # prints out the available REST methods
-
-print(sync.warning_methods)   # REST methods that require force=True to perform
-
-print(sync.help('db_browse')) # returns the documentation for a given method
-
-```
-
-### syncthing.Interface
-
-#### Interface(api_key, host='localhost', port=8080, timeout=3.0, is_https=False, ssl_cert_file=None, **kwargs)
-
-#### Interface.root
-Returns the connection string given the initialization parameters, ie: `http://localhost:5324`
-
-#### Interface.is_connected
-Returns `True` if the Interface can communicate with the Syncthing server, `False` otherwise.
-
-#### Interface.from_dict(d)
-Returns an Interface from a dictionary config.
-
-#### Interface.from_json(json_str)
-Returns an Interface from a JSON string.
-
-#### Interface.to_json()
-Exports Interface configuration as JSON string.
-
-### syncthing.Syncthing
