@@ -156,6 +156,8 @@ class Commands(object):
         self.sys.config_insync = self.sys.insync
         self.sys.conf_insync = self.sys.insync
         self.sys.conf = self.sys.config
+        self.database = self.db
+        self.system = self.sys
 
 
 class Interface(object):
@@ -168,6 +170,7 @@ class Interface(object):
             'is_https': False,
             'ssl_cert_file': None
         }
+
 
         self.options.update(options)
         self.options = GetDict(**self.options)
