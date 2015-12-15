@@ -3,6 +3,8 @@
 syncthing/private_*
 syncthing/settings/local*
 scratch.py
+.pypirc
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
