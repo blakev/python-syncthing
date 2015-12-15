@@ -2,6 +2,7 @@
 
 [![downloads/month](https://img.shields.io/pypi/dm/syncthing.svg?style=flat)](https://pypi.python.org/pypi/syncthing)
 ![version 1.0.0](https://img.shields.io/badge/version-1.0.0-orange.svg)
+![MIT License](https://img.shields.io/github/license/blakev/python-syncthing.svg)
 
 Python bindings to the Syncthing REST interface.
 
