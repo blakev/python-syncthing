@@ -1,75 +1,81 @@
 # python-syncthing
 
-Python bindings to the Syncthing REST interface. Supports Python 2 and Python 3 (via [six](http://pythonhosted.org//six/)).
+[![downloads/month](https://img.shields.io/pypi/dm/syncthing.svg?style=flat)](https://pypi.python.org/pypi/syncthing)
+![version 1.0.0](https://img.shields.io/badge/version-1.0.0-orange.svg)
 
-[Syncthing](https://syncthing.net/)
+Python bindings to the Syncthing REST interface.
 
-[Syncthing REST Documentation](https://github.com/syncthing/syncthing/wiki/REST-Interface)
+- [Syncthing](https://syncthing.net/)
+- [Syncthing REST Documentation](http://docs.syncthing.net/dev/rest.html)
+- [Syncthing Forums](https://forum.syncthing.net/)
+
+### Installation
 
 ```bash
 pip install syncthing
 ```
 
-These bindings use Meta classes to create dynamic bindings based on the latest documentation of the Synthing REST API on their github repository.
+The main interface `Syncthing` provides access to all of the underlying endpoints. They're divided the same as the documentation, in categories: `sys` (`system`), `db` (`database`), `stats`, `misc`. All `GET` methods are available as immediate function calls, and `POST` methods via **`sync.CATEGORY.set.COMMAND()`** (for example, `sync.sys.set.config(..)`).
 
-`GET` methods are returned as a Bunch dot-dictionary, and are bound to the `Syncthing` object as properties. `POST` calls are bound as methods to `Syncthing`,
-beginning with the word `set_`, and allow arguments to be passed similarly as they would in the HTTP header.
-
-
-**WARNING:** python-syncthing uses an offline cache to story the REST API that it retrieves from the parent github. If the python process does not have write privledges
-the first time the cache is synced it will fail with a permission error. To remedy this, before running `import syncthing` for the first time, run `sudo python -c "import syncthing"`
-from the commandline to pre-cache the api. The REST API version for the targetting Syncthing version will be included by default, however. (v0.11.6)
-
-## Quickstart
+### Usage
 
 ```python
-from syncthing.interface import get_latest_documentation
-from syncthing import Interface, Syncthing
+from syncthing import Syncthing
 
-# this will download the REST API markdown from github
-# and store it in a cache folder located in syncthing/docs.
-# when called explicitly it will update to the newest version
-# of the REST API, overwriting the old binding documentation.
-# otherwise, the Syncthing meta class will download the latest
-# documentation on first run, and use that as its bound version
-# until it's explicitly updated.
-get_latest_documentation()
+sync = Syncthing(api_key='xxxxabcdef', port=8384)
 
-sync_interface = Interface(
-    'my api key',
-    host = 'localhost',
-    port = 'syncthing port',
-    timeout = 5.0,            # seconds
-    is_https = False
-)
-
-sync = Syncthing(sync_interface)
-
-print(sync.methods)           # prints out the available REST methods
-
-print(sync.warning_methods)   # REST methods that require force=True to perform
-
-print(sync.help('db_browse')) # returns the documentation for a given method
-
+print(sync.sys.config())
 ```
 
-### syncthing.Interface
+#### Deferred Instantiation
 
-#### Interface(api_key, host='localhost', port=8080, timeout=3.0, is_https=False, ssl_cert_file=None, **kwargs)
+```python
 
-#### Interface.root
-Returns the connection string given the initialization parameters, ie: `http://localhost:5324`
+sync = Syncthing()
+...
+...
+sync.init(api_key='...')
+```
 
-#### Interface.is_connected
-Returns `True` if the Interface can communicate with the Syncthing server, `False` otherwise.
+#### Instance Values
 
-#### Interface.from_dict(d)
-Returns an Interface from a dictionary config.
+Both the `syncthing.Syncthing` and `syncthing.Interface` objects take the same `__init__` parameters. `Syncthing` provides getter/setter methods for the REST api that direct all communication through the `Interface` instance. An `Interface` object could interact with Syncthing directly by passing endpoints to the `do_req` method.
 
-#### Interface.from_json(json_str)
-Returns an Interface from a JSON string.
+- `api_key`: **required**
+- `host`: *localhost*
+- `port`: *8080*
+- `timeout`: *3.5* (seconds)
+- `is_https`: *False*
+- `ssl_cert_file`: *None*
 
-#### Interface.to_json()
-Exports Interface configuration as JSON string.
 
-### syncthing.Syncthing
+#### GET Methods
+
+```python
+conf = sync.sys.config()
+logs = sync.sys.log()
+db_status = sync.db.status()
+```
+
+#### POST Methods
+
+```python
+sync.sys.set.restart()
+sync.db.set.scan(folder='desktop_home')
+```
+
+### License
+
+> The MIT License (MIT)
+> 
+> Copyright (c) 2015-2016 Blake VandeMerwe
+> 
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+> 
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.

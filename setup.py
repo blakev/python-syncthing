@@ -18,19 +18,13 @@ syncthing_version_num = v_str(eval(syncthing_version))
 setup(
     name = 'syncthing',
     version = version_num,
-
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-
     description = 'Python bindings to the Syncthing REST interface, targeting v%s' % syncthing_version_num,
-
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
-
     install_requires = [
-        'bunch>=1.0.1',
         'requests>=2.7',
-        'six>=1.9.0'
     ],
     packages = [
         'syncthing'
@@ -39,10 +33,10 @@ setup(
         'syncthing': 'syncthing'
     },
     include_package_data = True,
-    zip_safe = False,
+    zip_safe = True,
     keywords = 'syncthing,sync,rest,backup',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',

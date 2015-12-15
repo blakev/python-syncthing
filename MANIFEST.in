@@ -1,2 +1,1 @@
-exclude syncthing/private_settings.py
 include *.md LICENSE VERSION requirements.txt
