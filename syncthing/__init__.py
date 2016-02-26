@@ -221,7 +221,7 @@ class Interface(object):
             resp = requests.request(
                 verb,
                 url,
-                data=data,
+                data=json.dumps(data),
                 params=params,
                 timeout=self.timeout,
                 verify=self.verify,
@@ -252,7 +252,7 @@ class Interface(object):
             if 'json' in resp.headers.get('Content-Type', 'text/plain').lower():
                 return resp.json()
             else:
-                c = resp.content
+                c = resp.content.decode("utf-8")
                 if c.startswith('{') and c.endswith('}'):
                     return json.loads(c)
                 return c
