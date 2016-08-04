@@ -165,7 +165,7 @@ class Interface(object):
         self.options = {
             'api_key': api_key,
             'host': 'localhost',
-            'port': 8080,
+            'port': 8384,
             'timeout': 3.5,
             'is_https': False,
             'ssl_cert_file': None
