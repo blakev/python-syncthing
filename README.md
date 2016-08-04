@@ -44,7 +44,7 @@ Both the `syncthing.Syncthing` and `syncthing.Interface` objects take the same `
 
 - `api_key`: **required**
 - `host`: *localhost*
-- `port`: *8080*
+- `port`: *8384*
 - `timeout`: *3.5* (seconds)
 - `is_https`: *False*
 - `ssl_cert_file`: *None*
