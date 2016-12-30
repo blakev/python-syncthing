@@ -1,278 +1,222 @@
-#!/usr/bin/python
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
-#
 # >>
-#     The MIT License (MIT)
+#     Copyright (c) 2016, Blake VandeMerwe
 #
-#     Copyright (c) 2015-2016 Blake VandeMerwe
+#       Permission is hereby granted, free of charge, to any person obtaining
+#       a copy of this software and associated documentation files
+#       (the "Software"), to deal in the Software without restriction,
+#       including without limitation the rights to use, copy, modify, merge,
+#       publish, distribute, sublicense, and/or sell copies of the Software,
+#       and to permit persons to whom the Software is furnished to do so, subject
+#       to the following conditions: The above copyright notice and this permission
+#       notice shall be included in all copies or substantial portions
+#       of the Software.
 #
-#     Permission is hereby granted, free of charge, to any person obtaining a copy
-#     of this software and associated documentation files (the "Software"), to deal
-#     in the Software without restriction, including without limitation the rights
-#     to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#     copies of the Software, and to permit persons to whom the Software is
-#     furnished to do so, subject to the following conditions:
-#
-#     The above copyright notice and this permission notice shall be included in all
-#     copies or substantial portions of the Software.
-#
-#     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#     SOFTWARE.
+#     python-syncthing, 2016
 # <<
+from __future__ import unicode_literals
 
-__author__ = 'Blake VandeMerwe <blakev@null.net>'
-__version__ = VERSION = (1, 0, 0)
-SYNCTHING_VERSION = (0, 12, 8)
-
-vstr = lambda x: '.'.join(map(str, x))
-
-version = vstr(VERSION)
-syncthing_version = vstr(SYNCTHING_VERSION)
-docstr = 'python-syncthing v%s targetting v%s' % (version, syncthing_version)
-
-import sys
+import os
 import json
-import time
 import logging
-import warnings
-from collections import namedtuple
 
 import requests
-from requests.packages.urllib3 import exceptions
-from requests.exceptions import ConnectionError, ConnectTimeout
-
-py_2 = sys.version_info.major == 2
-
-if py_2:
-    import urlparse as uparse
-else:
-    import urllib.parse as uparse
 
 logger = logging.getLogger(__name__)
 
-MIN_TIMEOUT_SECONDS = 1.0
-REST_ENDPOINT = '/rest'
+DEFAULT_TIMEOUT = 10.0
 
-class C(object):
-    ommand = namedtuple('Command', 'verb endpoint')
-
-    def __init__(self, verb, endpoint):
-        self.command = C.ommand(verb, REST_ENDPOINT + endpoint)
-
-    def __call__(self, data_obj=None, **params):
-        if data_obj is not None:
-            if not isinstance(data_obj, dict):
-                raise ValueError('data_obj must be of type dictionary')
-
-        if not hasattr(C, 'iface'):
-            return None
-
-        return C.iface.do_req(self.command.verb, self.command.endpoint, \
-                                data_obj, **params)
-
-    def __str__(self):
-        return self.__repr__()
-
-    def __repr__(self):
-        return '<Command(%s, "%s")>' % (self.command.verb, self.command.endpoint)
+__all__ = ['SyncthingError', 'BaseAPI', 'System',
+           'Database', 'Statistics', 'Syncthing']
 
 
-class GetDict(dict):
-    def __init__(self, *args, **kwargs):
-        super(GetDict, self).__init__(*args, **kwargs)
-        for arg in args:
-            if isinstance(arg, dict):
-                for k, v in arg.items():
-                    self[k] = v
-
-        for k, v in kwargs.items():
-            if isinstance(v, tuple):
-                v = C(*v)
-            self[k] = v
-
-    def __getattr__(self, item):
-        return self.get(item)
+class SyncthingError(Exception):
+    pass
 
 
-class Commands(object):
-    def __init__(self, interface):
-        C.iface = interface
+class BaseAPI(object):
+    prefix = ''
 
-        self.sys = GetDict(
-            config =    ('GET', '/system/config'),
-            insync =    ('GET', '/system/config/insync'),
-            connections=('GET', '/system/connections'),
-            debug =     ('GET', '/system/debug'),
-            discovery = ('GET', '/system/discovery'),
-            error =     ('GET', '/system/error'),
-            log =       ('GET', '/system/log'),
-            ping =      ('GET', '/system/ping'),
-            status =    ('GET', '/system/status'),
-            upgrade =   ('GET', '/system/upgrade'),
-            version =   ('GET', '/system/version'),
-            set = GetDict(
-                config =    ('POST', '/system/config'),
-                debug =     ('POST', '/system/debug'),
-                discovery = ('POST', '/system/discovery'),
-                clear =     ('POST', '/system/error/clear'),
-                error =     ('POST', '/system/error'),
-                ping =      ('POST', '/system/ping'),
-                reset =     ('POST', '/system/reset'),
-                restart =   ('POST', '/system/restart'),
-                shutdown =  ('POST', '/system/shutdown'),
-                upgrade =   ('POST', '/system/upgrade'),
-            )
-        )
-        self.db = GetDict(
-            browse =    ('GET', '/db/browse'),
-            completion =('GET', '/db/completion'),
-            file =      ('GET', '/db/file'),
-            ignores =   ('GET', '/db/ignores'),
-            need =      ('GET', '/db/need'),
-            status =    ('GET', '/db/status'),
-            set = GetDict(
-                ignores = ('POST', '/db/ignores'),
-                prio =    ('POST', '/db/prio'),
-                scan =    ('POST', '/db/scan')
-            )
-        )
-        self.stats = GetDict(
-            device =    ('GET', '/stats/device'),
-            folder =    ('GET', '/stats/folder')
-        )
-        self.misc = GetDict(
-            device_id = ('GET', '/svc/deviceid'),
-            lang =      ('GET', '/svc/lang'),
-            report =    ('GET', '/svc/report')
-        )
+    def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
+                    is_https=False, ssl_cert_file=None):
 
-        # set command aliases
-        self.misc.language = self.misc.lang
-        self.sys.config_insync = self.sys.insync
-        self.sys.conf_insync = self.sys.insync
-        self.sys.conf = self.sys.config
-        self.database = self.db
-        self.system = self.sys
+        if is_https and not ssl_cert_file:
+            logger.warning('using https without specifying ssl_cert_file')
 
+        if ssl_cert_file:
+            if not os.path.exists(ssl_cert_file):
+                raise SyncthingError('ssl_cert_file does not exist at location, %s' % ssl_cert_file)
 
-class Interface(object):
-    def __init__(self, api_key, **options):
-        self.options = {
-            'api_key': api_key,
-            'host': 'localhost',
-            'port': 8384,
-            'timeout': 3.5,
-            'is_https': False,
-            'ssl_cert_file': None
-        }
-
-
-        self.options.update(options)
-        self.options = GetDict(**self.options)
-
-        if self.options.is_https and self.options.ssl_cert_file is None:
-            warnings.warn('using https without specified ssl_cert_file')
-
-        self.verify = True if self.options.ssl_cert_file else False
-        self.protocol = 'https' if self.options.is_https else 'http'
-        self.timeout = max(MIN_TIMEOUT_SECONDS, self.options.timeout)
-        self.req_headers = {
+        self.api_key = api_key
+        self.host = host
+        self.is_https = is_https
+        self.port = port
+        self.ssl_cert_file = ssl_cert_file
+        self.timeout = timeout
+        self.verify = True if ssl_cert_file else False
+        self._headers = {
             'X-API-Key': api_key
         }
+        self.url = '{proto}://{host}:{port}'.format(
+            proto='https' if is_https else 'http', host=host, port=port)
+        self._base_url = self.url + '{endpoint}'
 
-        # cached "is_connected"
-        self.last_req = None
-        self.last_req_time = 0
+    def get(self, endpoint, data=None, headers=None, params=None):
+        endpoint = self.prefix + endpoint
+        return self._request('GET', endpoint, data, headers, params)
 
-    @property
-    def host(self):
-        return '%s://%s:%d' % (
-            self.protocol, self.options.host, self.options.port)
+    def post(self, endpoint, data=None, headers=None, params=None):
+        endpoint = self.prefix + endpoint
+        return self._request('POST', endpoint, data, headers, params)
 
-    @property
-    def connected(self):
-        if not self.last_req or self.last_req_time < (time.time() - 60):
-            self.__req('GET', '/')
-        return self.last_req
+    def _request(self, method, endpoint, data=None, headers=None, params=None):
+        method = method.upper()
 
-    def do_req(self, verb, endpoint, data=None, **params):
-        url = uparse.urljoin(self.host, endpoint)
-        return self.__req(verb, url, data, params)
+        endpoint = self._base_url.format(endpoint=endpoint)
 
-    def __req(self, verb, url, data=None, params=None):
-        verb = verb.upper()
-
-        if verb not in ['GET', 'POST', 'PUT', 'DELETE']:
-            raise UserWarning('unsupported http verb in rest request')
+        if method not in ('GET', 'POST', 'PUT', 'DELETE'):
+            raise SyncthingError('unsupported http verb requested, %s' % method)
 
         if data is None:
             data = {}
+        assert isinstance(data, dict)
+
+        if headers is None:
+            headers = {}
+        assert isinstance(headers, dict)
+
+        headers.update(self._headers)
 
         try:
-            with warnings.catch_warnings():
-                if not self.options.ssl_cert_file:
-                    warnings.simplefilter('ignore', exceptions.InsecureRequestWarning)
-
             resp = requests.request(
-                verb,
-                url,
+                method,
+                endpoint,
                 data=json.dumps(data),
                 params=params,
                 timeout=self.timeout,
                 verify=self.verify,
-                cert=self.options.ssl_cert_file,
-                headers=self.req_headers
+                cert=self.ssl_cert_file,
+                headers=headers
             )
-
-        except ConnectionError as e:
-            logger.error('could not connect to ' + self.host)
-            raise e
-
-        except ConnectTimeout as e:
-            logger.error('connection timed out after ' + self.timeout)
-            raise e
+            resp.raise_for_status()
 
         except requests.RequestException as e:
-            self.last_req = None
-            raise e
-        else:
-            self.last_req = resp.status_code == requests.codes.ok
-            self.last_req = time.time()
+            logger.exception(e)
+            raise SyncthingError(e)
 
+        else:
             if resp.status_code != requests.codes.ok:
-                logger.error('%s %s (%s): %s' % (
-                    resp.status_code, resp.reason, resp.url, resp.text))
+                logger.error('%d %s (%s): %s', resp.status_code, resp.reason,
+                                resp.url, resp.text)
                 return resp
 
             if 'json' in resp.headers.get('Content-Type', 'text/plain').lower():
-                return resp.json()
+                j =  resp.json()
+
             else:
-                c = resp.content.decode("utf-8")
-                if c.startswith('{') and c.endswith('}'):
-                    return json.loads(c)
-                return c
+                content = resp.content.decode('utf-8')
+                if content[0] == '{' and content[-1] == '}':
+                    j = json.loads(content)
+
+                else:
+                    return content
+
+            if isinstance(j, dict) and j.get('error'):
+                api_err = j.get('error')
+                raise SyncthingError(api_err)
+
+            return j
+
+
+class System(BaseAPI):
+    prefix = '/rest/system/'
+
+
+class Database(BaseAPI):
+    prefix = '/rest/db/'
+
+
+class Statistics(BaseAPI):
+    prefix = '/rest/stats/'
+
+    def device(self):
+        return self.get('device')
+
+    def folder(self):
+        return self.get('folder')
+
+
+class Misc(BaseAPI):
+    prefix = '/rest/svc/'
+
+    def device_id(self, id_):
+        """ Verifies and formats a device ID. Accepts all currently valid formats
+            (52 or 56 characters with or without separators, upper or lower case,
+            with trivial substitutions). Takes one parameter, id, and returns
+            either a valid device ID in modern format, or an error.
+
+            Args:
+                id_ (str)
+
+            Raises:
+                SyncthingError: when ``id_`` is an invalid length.
+
+            Returns:
+                str
+        """
+        return self.get('deviceid', params={'id': id_}).get('id')
+
+    def language(self):
+        """ Returns a list of canonicalized localization codes, as picked up from
+            the Accept-Language header sent by the browser. By default, this API
+            will return a single element that's empty; however calling
+            :func:`Misc.get` directly with `lang` you can set specific headers
+            to get values back as intended.
+
+            Returns:
+                List[str]
+        """
+        return self.get('lang')
+
+    def random_string(self, length=32):
+        """ Returns a strong random generated string (alphanumeric) of the
+            specified length.
+
+            Args:
+                length (int): default ``32``.
+
+            Returns:
+                str
+        """
+        return self.get('random/string', params={'length': length}).get('random', None)
+
+    def report(self):
+        """ Returns the data sent in the anonymous usage report.
+
+            Returns:
+                dict
+        """
+        return self.get('report')
 
 
 class Syncthing(object):
-    def __init__(self, **kwargs):
-        self._interface = None
-        self._commands = None
+    def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
+                    is_https=False, ssl_cert_file=None):
 
-        if kwargs and kwargs.get('api_key', None):
-            key = kwargs.pop('api_key')
-            self.init(key, **kwargs)
+        self.api_key = api_key
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.is_https = is_https
+        self.ssl_cert_file = ssl_cert_file
 
-    def init(self, api_key, **kwargs):
-        if self._interface is None:
-            self._interface = Interface(api_key, **kwargs)
-            self._commands = Commands(self._interface)
+        kwargs = {
+            'host': host, 'port': port, 'timeout': timeout, 'is_https': is_https,
+                'ssl_cert_file': ssl_cert_file
+        }
 
-    def __getattr__(self, item):
-        if self._interface is None:
-            raise AttributeError('must call Syncthing.init before performing operations')
-        return self._commands.__dict__.get(item)
+        self.system = System(api_key, **kwargs)
+        self.database = Database(api_key, **kwargs)
+        self.stats = Statistics(api_key, **kwargs)
+        self.misc = Misc(api_key, **kwargs)
