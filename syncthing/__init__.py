@@ -20,15 +20,74 @@ from __future__ import unicode_literals
 import os
 import json
 import logging
+import warnings
+from collections import namedtuple
+from datetime import datetime, timedelta
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 10.0
+SYNCTHING_DATE_FMT = '%Y-%m-%dT%H:%M:%S.%f'
 
-__all__ = ['SyncthingError', 'BaseAPI', 'System',
-           'Database', 'Statistics', 'Syncthing']
+__all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
+           'Database', 'Statistics', 'Syncthing', 'parse_datetime']
+
+ErrorEvent = namedtuple('ErrorEvent', 'when, message')
+
+
+def _syncthing():
+    KEY = os.getenv('SYNCTHING_API_KEY')
+    HOST = os.getenv('SYNCTHING_HOST', '127.0.0.1')
+    PORT = os.getenv('SYNCTHING_PORT', 8384)
+    IS_HTTPS = bool(int(os.getenv('SYNCTHING_HTTPS', '0')))
+    SSL_CERT_FILE = os.getenv('SYNCTHING_CERT_FILE')
+    return Syncthing(KEY, HOST, PORT, 10.0, IS_HTTPS, SSL_CERT_FILE)
+
+
+def parse_datetime(s, date_format=SYNCTHING_DATE_FMT):
+    """ Converts the time-string format from Syncthing into
+        a valid :obj:`.DateTime` object.
+
+        Args:
+            s (str):
+            date_format (str):
+
+        Returns:
+            :obj:`~datetime.datetime.DateTime`
+    """
+    if not s:
+        return s
+    obj = datetime.strptime(s[0:26], date_format)
+    offset = s[-6:].replace(':', '')
+    if offset[0] in '+-':
+        hours, minutes = offset[1:3], offset[3:]
+        delta = timedelta(hours=int(hours), minutes=int(minutes))
+        if offset[0] == '+':
+            obj += delta
+        else:
+            obj -= delta
+    return obj
+
+
+def keys_to_datetime(obj, *keys):
+    """ Converts all the keys in an object to DateTime instances.
+
+        Args:
+            obj (dict)
+            keys (*str)
+
+        Returns:
+            dict: ``obj`` inplace.
+    """
+    if not keys:
+        return obj
+    for k in keys:
+        if k not in obj:
+            continue
+        obj[k] = parse_datetime(obj[k])
+    return obj
 
 
 class SyncthingError(Exception):
@@ -62,15 +121,16 @@ class BaseAPI(object):
             proto='https' if is_https else 'http', host=host, port=port)
         self._base_url = self.url + '{endpoint}'
 
-    def get(self, endpoint, data=None, headers=None, params=None):
+    def get(self, endpoint, data=None, headers=None, params=None, return_response=False):
         endpoint = self.prefix + endpoint
-        return self._request('GET', endpoint, data, headers, params)
+        return self._request('GET', endpoint, data, headers, params, return_response)
 
-    def post(self, endpoint, data=None, headers=None, params=None):
+    def post(self, endpoint, data=None, headers=None, params=None, return_response=False):
         endpoint = self.prefix + endpoint
-        return self._request('POST', endpoint, data, headers, params)
+        return self._request('POST', endpoint, data, headers, params, return_response)
 
-    def _request(self, method, endpoint, data=None, headers=None, params=None):
+    def _request(self, method, endpoint, data=None, headers=None, params=None,
+                    return_response=False):
         method = method.upper()
 
         endpoint = self._base_url.format(endpoint=endpoint)
@@ -99,13 +159,18 @@ class BaseAPI(object):
                 cert=self.ssl_cert_file,
                 headers=headers
             )
-            resp.raise_for_status()
+
+            if not return_response:
+                resp.raise_for_status()
 
         except requests.RequestException as e:
             logger.exception(e)
             raise SyncthingError(e)
 
         else:
+            if return_response:
+                return resp
+
             if resp.status_code != requests.codes.ok:
                 logger.error('%d %s (%s): %s', resp.status_code, resp.reason,
                                 resp.url, resp.text)
@@ -132,18 +197,465 @@ class BaseAPI(object):
 class System(BaseAPI):
     prefix = '/rest/system/'
 
+    def config(self):
+        """ Returns the current configuration.
+
+            Returns:
+                dict
+        """
+        return self.get('config')
+
+    def set_config(self, config, and_restart=False):
+        """ Post the full contents of the configuration, in the same format as
+        returned by :func:`.config`. The configuration will be saved to disk and
+        the ``configInSync`` flag set to ``False``. Restart Syncthing to activate."""
+        assert isinstance(config, dict)
+        self.post('config', data=config)
+        if and_restart:
+            self.restart()
+
+    def config_insync(self):
+        """ Returns whether the config is in sync, i.e. whether the running
+            configuration is the same as that on disk.
+
+            Returns:
+                bool
+        """
+        status = self.get('config/insync').get('configInSync', False)
+        if status is None:
+            status = False
+        return status
+
+    def connections(self):
+        """ Returns the list of configured devices and some metadata
+            associated with them. The list also contains the local device
+            itself as not connected.
+
+            Returns:
+                dict
+        """
+        return self.get('connections')
+
+    def debug(self):
+        """ Returns the set of debug facilities and which of them are
+            currently enabled.
+
+            Returns:
+                dict
+        """
+        return self.get('debug')
+
+    def disable_debug(self, *on):
+        """ Disables debugging for specified facilities.
+
+            Args:
+                on (*str)
+
+            Returns:
+                None
+        """
+        self.post('debug', params={'disable': ','.join(on)})
+
+    def enable_debug(self, *on):
+        """ Enables debugging for specified facilities.
+
+            Args:
+                on (*str)
+
+            Returns:
+                None
+        """
+        self.post('debug', params={'enable': ','.join(on)})
+
+    def discovery(self):
+        """ Returns the contents of the local discovery cache.
+
+            Returns:
+                dict
+        """
+        return self.get('discovery')
+
+    def add_discovery(self, device, address):
+        """ Add an entry to the discovery cache.
+
+            Args:
+                device (str): Device ID.
+                address (str): destination address, a valid hostname or
+                    IP address that's serving a Syncthing instance.
+
+            Returns:
+                None
+        """
+        self.post('discovery', params={'device': device,
+                                       'address': address})
+
+    def clear(self):
+        """ Remove all recent errors.
+
+            Returns:
+                None
+        """
+        self.post('error/clear')
+
+
+    def clear_errors(self):
+        """ Alias function for :func:`.clear`. """
+        self.clear()
+
+    def errors(self):
+        """ Returns the list of recent errors.
+
+            Returns:
+                list: of :obj:`.ErrorEvent` tuples.
+        """
+        ret_errs = list()
+        errors = self.get('error').get('errors', None) or list()
+        assert isinstance(errors, list)
+        for err in errors:
+            when = parse_datetime(err.get('when', None))
+            msg = err.get('message', '')
+            e = ErrorEvent(when, msg)
+            ret_errs.append(e)
+        return errors
+
+    def show_error(self, message):
+        """ Send an error message to the active client. The new error will be
+            displayed on any active GUI clients.
+
+            Args:
+                message (str): Plain-text message to display.
+
+            Returns:
+                None
+        """
+        assert isinstance(message, str)
+        self.post('error', data=message)
+
+    def log(self):
+        """ Returns the list of recent log entries.
+
+            Returns:
+                dict
+        """
+        return self.get('log')
+
+    def pause(self, device):
+        """ Pause the given device.
+
+            Args:
+                device (str): Device ID.
+
+            Returns:
+                dict: with keys ``success`` and ``error``.
+        """
+        resp = self.post('pause', params={'device': device}, return_response=True)
+        error = resp.text()
+        if not error:
+            error = None
+        return {'success': resp.status_code == requests.codes.ok,
+                'error': error}
+
+    def ping(self, with_method='GET'):
+        """ Pings the Syncthing server.
+
+            Args:
+                with_method (str): uses a given HTTP method, options are
+                    ``GET`` and ``POST``.
+
+            Returns:
+                dict
+        """
+        assert with_method in ('GET', 'POST')
+        if with_method == 'GET':
+            return self.get('ping')
+        return self.post('ping')
+
+    def reset(self):
+        """ Erase the current index database and restart Syncthing.
+
+            Returns:
+                None
+        """
+        warnings.warn('This is a destructive action that cannot be undone.')
+        self.post('reset', data={})
+
+    def reset_folder(self, folder):
+        """ Erase the database index from a given folder and restart Syncthing.
+
+            Args:
+                folder (str): Folder ID.
+
+            Returns:
+                None
+        """
+        warnings.warn('This is a destructive action that cannot be undone.')
+        self.post('reset', data={}, params={'folder': folder})
+
+    def restart(self):
+        """ Immediately restart Syncthing.
+
+            Returns:
+                None
+        """
+        self.post('restart', data={})
+
+    def resume(self, device):
+        """ Resume the given device.
+
+            Args:
+                device (str): Device ID.
+
+            Returns:
+                dict: with keys ``success`` and ``error``.
+        """
+        resp = self.post('resume', params={'device': device}, return_response=True)
+        error = resp.text()
+        if not error:
+            error = None
+        return {'success': resp.status_code == requests.codes.ok,
+                'error': error}
+
+    def shutdown(self):
+        """ Causes Syncthing to exit and not restart.
+
+            Returns:
+                None
+        """
+        self.post('shutdown', data={})
+
+    def status(self):
+        """ Returns information about current system status and resource usage.
+
+            Returns:
+                dict
+        """
+        resp = self.get('status')
+        resp = keys_to_datetime(resp, 'startTime')
+        return resp
+
+    def upgrade(self):
+        """ Checks for a possible upgrade and returns an object describing
+            the newest version and upgrade possibility.
+
+            Returns:
+                dict
+        """
+        return self.get('upgrade')
+
+    def can_upgrade(self):
+        """ Returns whether there's a new version than the one currently running.
+
+            Returns:
+                bool
+        """
+        return (self.upgrade() or {}).get('newer', False)
+
+    def do_upgrade(self):
+        """ Perform an upgrade to the newest released version and restart.
+            Does nothing if there is no newer version than currently running.
+
+            Returns:
+                None
+        """
+        return self.post('upgrade')
+
+    def version(self):
+        """ Returns the current Syncthing version information.
+
+            Returns:
+                dict
+        """
+        return self.get('version')
+
 
 class Database(BaseAPI):
     prefix = '/rest/db/'
+
+    def browse(self, folder, levels=None, prefix=None):
+        """ Returns the directory tree of the global model.
+
+            Directories are always JSON objects (map/dictionary), and files are
+            always arrays of modification time and size. The first integer is
+            the files modification time, and the second integer is the file size.
+
+            Args:
+                folder (str): The root folder to traverse.
+                levels (int): How deep within the tree we want to dwell down.
+                    (0 based, defaults to unlimited depth)
+                prefix (str): Defines a prefix within the tree where to start
+                    building the structure.
+
+            Returns:
+                dict
+        """
+        assert isinstance(levels, int) or levels is None
+        assert isinstance(prefix, str) or prefix is None
+        return self.get('browse', params={'folder': folder,
+                                          'levels': levels,
+                                          'prefix': prefix})
+
+    def completion(self, device, folder):
+        """ Returns the completion percentage (0 to 100) for a given device
+            and folder.
+
+            Args:
+                device (str): The Syncthing device the folder is syncing to.
+                folder (str): The folder that is being synced.
+
+            Returs:
+                int
+        """
+        return self.get('completion', params={'folder': folder,
+                                              'device': device}).get('completion', None)
+
+    def file(self, folder, file_):
+        """ Returns most data available about a given file, including version
+            and availability.
+
+            Args:
+                folder (str):
+                file_ (str):
+
+            Returns:
+                dict
+        """
+        return self.get('file', params={'folder': folder,
+                                        'file': file_})
+
+    def ignores(self, folder):
+        """ Returns the content of the ``.stignore`` as the ignore field. A second
+            field, expanded, provides a list of strings which represent globbing
+            patterns described by gobwas/glob (based on standard wildcards) that
+            match the patterns in ``.stignore`` and all the includes.
+
+            If appropriate these globs are prepended by the following modifiers:
+            ``!`` to negate the glob, ``(?i)`` to do case insensitive matching and
+            ``(?d)`` to enable removing of ignored files in an otherwise empty directory.
+
+            Args:
+                folder
+
+            Returns:
+                dict
+        """
+        return self.get('ignores', params={'folder': folder})
+
+    def set_ignores(self, folder, *patterns):
+        """ Applies ``patterns`` to ``folder``'s ``.stignore`` file.
+
+            Args:
+                folder (str):
+                patterns (str):
+
+            Returns:
+                dict
+        """
+        if not patterns:
+            return {}
+        data = {'ignores': list(patterns)}
+        return self.post('ignores', params={'folder': folder}, data=data)
+
+    def need(self, folder, page=None, perpage=None):
+        """ Returns lists of files which are needed by this device in order for it
+            to become in sync.
+
+            Args:
+                folder (str):
+                page (int): If defined applies pagination accross the collection of results.
+                perpage (int): If defined applies pagination across the collection of results.
+
+            Returns:
+                dict
+        """
+        assert isinstance(page, int) or page is None
+        assert isinstance(perpage, int) or perpage is None
+        self.get('need', params={'folder': folder,
+                                 'page': page,
+                                 'perpage': perpage})
+
+    def override(self, folder):
+        """ Request override of a send-only folder.
+
+            Args:
+                folder (str): folder ID.
+
+            Returns:
+                dict
+        """
+        self.post('override', params={'folder': folder})
+
+    def prio(self, folder, file_):
+        """ Moves the file to the top of the download queue.
+
+            Args:
+                folder (str):
+                file_ (str):
+
+            Returns:
+                dict
+        """
+        self.post('prio', params={'folder': folder,
+                                  'file': file_})
+
+    def scan(self, folder, sub=None, next_=None):
+        """ Request immediate rescan of a folder, or a specific path within a folder.
+
+            Args:
+                folder (str): Folder ID.
+                sub (str): Path relative to the folder root. If sub is omitted the entire
+                    folder is scanned for changes, otherwise only the given path children
+                    are scanned.
+                next_ (int): Delays Syncthing's automated rescan interval for
+                    a given amount of seconds.
+
+            Returns:
+                str
+        """
+        if not sub:
+            sub = ''
+        assert isinstance(sub, str)
+        assert isinstance(next_, int) or next_ is None
+        return self.post('scan', params={'folder': folder,
+                                         'sub': sub,
+                                         'next': next_})
+
+    def status(self, folder):
+        """ Returns information about the current status of a folder.
+
+            Note:
+                This is an expensive call, increasing CPU and RAM usage on the
+                device. Use sparingly.
+
+            Args:
+                folder (str): Folder ID.
+
+            Returns:
+                dict
+        """
+        return self.get('status', params={'folder': folder})
 
 
 class Statistics(BaseAPI):
     prefix = '/rest/stats/'
 
     def device(self):
+        """ Returns general statistics about devices.
+
+            Currently, only contains the time the device was last seen.
+
+            Returns:
+                dict
+        """
         return self.get('device')
 
     def folder(self):
+        """ Returns general statistics about folders.
+
+            Currently contains the last scan time and the last synced file.
+
+            Returns:
+                dict
+        """
         return self.get('folder')
 
 
@@ -176,6 +688,14 @@ class Misc(BaseAPI):
 
             Returns:
                 List[str]
+
+            >>> s = _syncthing()
+            >>> len(s.misc.language())
+            1
+            >>> s.misc.language()[0]
+            u''
+            >>> s.misc.get('lang', headers={'Accept-Language': 'en-us'})
+            [u'en-us']
         """
         return self.get('lang')
 
@@ -188,6 +708,22 @@ class Misc(BaseAPI):
 
             Returns:
                 str
+
+            >>> s = _syncthing()
+            >>> len(s.misc.random_string(32))
+            32
+            >>> len(s.misc.random_string(1))
+            1
+            >>> len(s.misc.random_string(0))
+            32
+            >>> len(s.misc.random_string(None))
+            32
+            >>> import string
+            >>> all_letters = string.ascii_letters + string.digits
+            >>> all([c in all_letters for c in s.misc.random_string(128)])
+            True
+            >>> all([c in all_letters for c in s.misc.random_string(1024)])
+            True
         """
         return self.get('random/string', params={'length': length}).get('random', None)
 
@@ -196,6 +732,15 @@ class Misc(BaseAPI):
 
             Returns:
                 dict
+
+            >>> s = _syncthing()
+            >>> report = s.misc.report()
+            >>> 'version' in report
+            True
+            >>> 'longVersion' in report
+            True
+            >>> 'syncthing v' in report['longVersion']
+            True
         """
         return self.get('report')
 
@@ -220,3 +765,8 @@ class Syncthing(object):
         self.database = Database(api_key, **kwargs)
         self.stats = Statistics(api_key, **kwargs)
         self.misc = Misc(api_key, **kwargs)
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
