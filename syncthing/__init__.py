@@ -25,6 +25,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 
 import requests
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +33,12 @@ DEFAULT_TIMEOUT = 10.0
 SYNCTHING_DATE_FMT = '%Y-%m-%dT%H:%M:%S.%f'
 
 __all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
-           'Database', 'Statistics', 'Syncthing', 'parse_datetime']
+           'Database', 'Statistics', 'Syncthing',
+           # methods
+           'keys_to_datetime', 'parse_datetime']
 
 ErrorEvent = namedtuple('ErrorEvent', 'when, message')
-
+""" Tuple object used to process error lists more easily, instead of by two-key dictionaries. """
 
 def _syncthing():
     KEY = os.getenv('SYNCTHING_API_KEY')
@@ -51,11 +54,12 @@ def parse_datetime(s, date_format=SYNCTHING_DATE_FMT):
         a valid :obj:`.DateTime` object.
 
         Args:
-            s (str):
-            date_format (str):
+            s (str): the time-string that needs to be formatted.
+            date_format (str): the datetime mask that's applied to
+                ``s`` to isolate datetime components.
 
         Returns:
-            :obj:`~datetime.datetime.DateTime`
+            :py:class:`~datetime.datetime.DateTime`
     """
     if not s:
         return s
@@ -75,8 +79,9 @@ def keys_to_datetime(obj, *keys):
     """ Converts all the keys in an object to DateTime instances.
 
         Args:
-            obj (dict)
-            keys (*str)
+            obj (dict): the JSON-like ``dict`` object to modify inplace.
+            keys (str): keys of the object being converted into DateTime
+                instances.
 
         Returns:
             dict: ``obj`` inplace.
@@ -91,7 +96,7 @@ def keys_to_datetime(obj, *keys):
 
 
 class SyncthingError(Exception):
-    pass
+    """ Base Syncthing Exception class that all non-assert errors will raise from. """
 
 
 class BaseAPI(object):
@@ -140,7 +145,7 @@ class BaseAPI(object):
 
         if data is None:
             data = {}
-        assert isinstance(data, dict)
+        assert isinstance(data, (string_types, dict))
 
         if headers is None:
             headers = {}
@@ -181,7 +186,7 @@ class BaseAPI(object):
 
             else:
                 content = resp.content.decode('utf-8')
-                if content[0] == '{' and content[-1] == '}':
+                if content and content[0] == '{' and content[-1] == '}':
                     j = json.loads(content)
 
                 else:
@@ -196,12 +201,25 @@ class BaseAPI(object):
 
 class System(BaseAPI):
     prefix = '/rest/system/'
+    """ HTTP REST endpoint for System calls."""
 
     def config(self):
         """ Returns the current configuration.
 
             Returns:
                 dict
+
+            >>> s = _syncthing().system
+            >>> config = s.config()
+            >>> config
+            ... # doctest: +ELLIPSIS
+            {...}
+            >>> 'version' in config and config['version'] >= 15
+            True
+            >>> 'folders' in config
+            True
+            >>> 'devices' in config
+            True
         """
         return self.get('config')
 
@@ -233,6 +251,15 @@ class System(BaseAPI):
 
             Returns:
                 dict
+
+            >>> s = _syncthing().system
+            >>> connections = s.connections()
+            >>> connections.keys()
+            [u'connections', u'total']
+            >>> isinstance(connections['connections'], dict)
+            True
+            >>> isinstance(connections['total'], dict)
+            True
         """
         return self.get('connections')
 
@@ -242,6 +269,20 @@ class System(BaseAPI):
 
             Returns:
                 dict
+
+            >>> s = _syncthing().system
+            >>> debug = s.debug()
+            >>> debug
+            ... #doctest: +ELLIPSIS
+            {...}
+            >>> len(debug.keys())
+            2
+            >>> 'enabled' in debug and 'facilities' in debug
+            True
+            >>> isinstance(debug['enabled'], list) or debug['enabled'] is None
+            True
+            >>> isinstance(debug['facilities'], dict)
+            True
         """
         return self.get('debug')
 
@@ -249,7 +290,7 @@ class System(BaseAPI):
         """ Disables debugging for specified facilities.
 
             Args:
-                on (*str)
+                on (str): debugging points to apply ``disable``.
 
             Returns:
                 None
@@ -260,7 +301,7 @@ class System(BaseAPI):
         """ Enables debugging for specified facilities.
 
             Args:
-                on (*str)
+                on (str): debugging points to apply ``enable``.
 
             Returns:
                 None
@@ -299,7 +340,7 @@ class System(BaseAPI):
 
 
     def clear_errors(self):
-        """ Alias function for :func:`.clear`. """
+        """ Alias function for :meth:`.clear`. """
         self.clear()
 
     def errors(self):
@@ -316,7 +357,7 @@ class System(BaseAPI):
             msg = err.get('message', '')
             e = ErrorEvent(when, msg)
             ret_errs.append(e)
-        return errors
+        return ret_errs
 
     def show_error(self, message):
         """ Send an error message to the active client. The new error will be
@@ -327,8 +368,17 @@ class System(BaseAPI):
 
             Returns:
                 None
+
+            >>> s = _syncthing()
+            >>> s.system.show_error('my error message')
+            >>> s.system.errors()[0]
+            ... # doctest: +ELLIPSIS
+            ErrorEvent(when=datetime.datetime(...), message=u'"my error message"')
+            >>> s.system.clear_errors()
+            >>> s.system.errors()
+            []
         """
-        assert isinstance(message, str)
+        assert isinstance(message, string_types)
         self.post('error', data=message)
 
     def log(self):
@@ -470,6 +520,7 @@ class System(BaseAPI):
 
 class Database(BaseAPI):
     prefix = '/rest/db/'
+    """ HTTP REST endpoint for Database calls."""
 
     def browse(self, folder, levels=None, prefix=None):
         """ Returns the directory tree of the global model.
@@ -489,7 +540,7 @@ class Database(BaseAPI):
                 dict
         """
         assert isinstance(levels, int) or levels is None
-        assert isinstance(prefix, str) or prefix is None
+        assert isinstance(prefix, string_types) or prefix is None
         return self.get('browse', params={'folder': folder,
                                           'levels': levels,
                                           'prefix': prefix})
@@ -613,7 +664,7 @@ class Database(BaseAPI):
         """
         if not sub:
             sub = ''
-        assert isinstance(sub, str)
+        assert isinstance(sub, string_types)
         assert isinstance(next_, int) or next_ is None
         return self.post('scan', params={'folder': folder,
                                          'sub': sub,
@@ -637,6 +688,7 @@ class Database(BaseAPI):
 
 class Statistics(BaseAPI):
     prefix = '/rest/stats/'
+    """ HTTP REST endpoint for Statistic calls."""
 
     def device(self):
         """ Returns general statistics about devices.
@@ -661,6 +713,7 @@ class Statistics(BaseAPI):
 
 class Misc(BaseAPI):
     prefix = '/rest/svc/'
+    """ HTTP REST endpoint for Miscelaneous calls."""
 
     def device_id(self, id_):
         """ Verifies and formats a device ID. Accepts all currently valid formats
@@ -710,6 +763,8 @@ class Misc(BaseAPI):
                 str
 
             >>> s = _syncthing()
+            >>> len(s.misc.random_string())
+            32
             >>> len(s.misc.random_string(32))
             32
             >>> len(s.misc.random_string(1))
@@ -746,6 +801,27 @@ class Misc(BaseAPI):
 
 
 class Syncthing(object):
+    """ Default interface for interacting with Syncthing server instance.
+
+        Args:
+            api_key (str)
+            host (str)
+            port (int)
+            timeout (float)
+            is_https (bool)
+            ssl_cert_file (str)
+
+        Attributes:
+            system: instance of :class:`.System`.
+            database: instance of :class:`.Database`.
+            stats: instance of :class:`.Statistics`.
+            misc: instance of :class:`.Misc`.
+
+        Note:
+            - attribute :attr:`.db` is an alias of :attr:`.database`
+            - attribute :attr:`.sys` is an alias of :attr:`.system`
+    """
+
     def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
                     is_https=False, ssl_cert_file=None):
 
@@ -761,8 +837,8 @@ class Syncthing(object):
                 'ssl_cert_file': ssl_cert_file
         }
 
-        self.system = System(api_key, **kwargs)
-        self.database = Database(api_key, **kwargs)
+        self.system = self.sys = System(api_key, **kwargs)
+        self.database = self.db = Database(api_key, **kwargs)
         self.stats = Statistics(api_key, **kwargs)
         self.misc = Misc(api_key, **kwargs)
 

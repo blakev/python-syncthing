@@ -39,9 +39,6 @@ class TestBaseAPI(unittest.TestCase):
         resp = requests.get(sync.misc.url)
         self.assertEqual(resp.status_code, 200, 'cannot connect to syncthing')
 
-    def test_m_system(self):
-        pass
-
     def test_m_database(self):
         pass
 
@@ -79,3 +76,14 @@ class TestBaseAPI(unittest.TestCase):
         self.assertEqual(len(s.misc.random_string(0)), 32)
         self.assertEqual(len(s.misc.random_string(1)), 1)
         self.assertEqual(len(s.misc.get('random/string').get('random', None)), 32)
+
+
+class TestSystemAPI(unittest.TestCase):
+    def test_errors(self):
+        s = syncthing()
+        s.system.errors()
+
+    def test_status(self):
+        s = syncthing()
+        status = s.system.status()
+        self.assertIsInstance(status, dict)
