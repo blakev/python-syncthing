@@ -3,28 +3,19 @@
 #
 # Created by: Blake on 5/7/2015 at 11:57 AM
 
-import os
 from setuptools import setup
-
-v_str = lambda s: '.'.join(map(str, s))
-with open('VERSION', 'r') as version_file:
-    version_string = version_file.readline().strip()
-
-version, syncthing_version = version_string.split('|')
-
-version_num = v_str(eval(version))
-syncthing_version_num = v_str(eval(syncthing_version))
 
 setup(
     name = 'syncthing',
-    version = version_num,
+    version = '2.0.0',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-    description = 'Python bindings to the Syncthing REST interface, targeting v%s' % syncthing_version_num,
+    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.19',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
-        'requests>=2.7',
+        'requests>=2.9',
+        'six==1.10.0'
     ],
     packages = [
         'syncthing'
@@ -34,7 +25,7 @@ setup(
     },
     include_package_data = True,
     zip_safe = True,
-    keywords = 'syncthing,sync,rest,backup',
+    keywords = 'syncthing,sync,rest,backup,api',
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
