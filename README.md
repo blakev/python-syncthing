@@ -2,7 +2,7 @@ python-syncthing
 ================
 
 [![Documentation Status](https://readthedocs.org/projects/python-syncthing/badge/?version=latest)](http://python-syncthing.readthedocs.io/en/latest/?badge=latest)
-![MIT License](https://img.shields.io/github/license/blakev/python-syncthing.svg)
+[![MIT License](https://img.shields.io/github/license/blakev/python-syncthing.svg)](https://github.com/blakev/python-syncthing/blob/master/LICENSE)
 
 
 Python bindings to the Syncthing REST interface.
