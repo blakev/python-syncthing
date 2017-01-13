@@ -60,6 +60,19 @@ def parse_datetime(s, date_format=SYNCTHING_DATE_FMT):
 
         Returns:
             :py:class:`~datetime.datetime.DateTime`
+
+        >>> parse_datetime(None) is None
+        True
+        >>> parse_datetime('')
+        ''
+        >>> parse_datetime('2016-06-06T19:41:43.039284753+02:00')
+        datetime.datetime(2016, 6, 6, 21, 41, 43, 39284)
+        >>> parse_datetime('2016-06-06T19:41:43.039284753-02:00')
+        datetime.datetime(2016, 6, 6, 17, 41, 43, 39284)
+        >>> parse_datetime('2016-06-06T19:41:43.039284000-02:00')
+        datetime.datetime(2016, 6, 6, 17, 41, 43, 39284)
+        >>> parse_datetime('2016-06-06T19:41:43.039284')
+        datetime.datetime(2016, 6, 6, 19, 41, 43, 39284)
     """
     if not s:
         return s
@@ -85,13 +98,31 @@ def keys_to_datetime(obj, *keys):
 
         Returns:
             dict: ``obj`` inplace.
+
+        >>> keys_to_datetime(None) is None
+        True
+        >>> keys_to_datetime({})
+        {}
+        >>> a = {}
+        >>> id(keys_to_datetime(a)) == id(a)
+        True
+        >>> a = {'one': '2016-06-06T19:41:43.039284', 'two': '2016-06-06T19:41:43.039284'}
+        >>> keys_to_datetime(a) == a
+        True
+        >>> keys_to_datetime(a, 'one')['one']
+        datetime.datetime(2016, 6, 6, 19, 41, 43, 39284)
+        >>> keys_to_datetime(a, 'one')['two']
+        '2016-06-06T19:41:43.039284'
     """
     if not keys:
         return obj
     for k in keys:
         if k not in obj:
             continue
-        obj[k] = parse_datetime(obj[k])
+        v = obj[k]
+        if not isinstance(v, string_types):
+            continue
+        obj[k] = parse_datetime(v)
     return obj
 
 
@@ -101,6 +132,7 @@ class SyncthingError(Exception):
 
 class BaseAPI(object):
     prefix = ''
+    """ Placeholder for HTTP REST API URL prefix. """
 
     def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
                     is_https=False, ssl_cert_file=None):
@@ -254,8 +286,8 @@ class System(BaseAPI):
 
             >>> s = _syncthing().system
             >>> connections = s.connections()
-            >>> connections.keys()
-            [u'connections', u'total']
+            >>> sorted([k for k in connections.keys()])
+            ['connections', 'total']
             >>> isinstance(connections['connections'], dict)
             True
             >>> isinstance(connections['total'], dict)
@@ -373,7 +405,7 @@ class System(BaseAPI):
             >>> s.system.show_error('my error message')
             >>> s.system.errors()[0]
             ... # doctest: +ELLIPSIS
-            ErrorEvent(when=datetime.datetime(...), message=u'"my error message"')
+            ErrorEvent(when=datetime.datetime(...), message='"my error message"')
             >>> s.system.clear_errors()
             >>> s.system.errors()
             []
@@ -746,9 +778,9 @@ class Misc(BaseAPI):
             >>> len(s.misc.language())
             1
             >>> s.misc.language()[0]
-            u''
+            ''
             >>> s.misc.get('lang', headers={'Accept-Language': 'en-us'})
-            [u'en-us']
+            ['en-us']
         """
         return self.get('lang')
 
