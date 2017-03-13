@@ -431,7 +431,7 @@ class System(BaseAPI):
                 dict: with keys ``success`` and ``error``.
         """
         resp = self.post('pause', params={'device': device}, return_response=True)
-        error = resp.text()
+        error = resp.text
         if not error:
             error = None
         return {'success': resp.status_code == requests.codes.ok,
@@ -491,7 +491,7 @@ class System(BaseAPI):
                 dict: with keys ``success`` and ``error``.
         """
         resp = self.post('resume', params={'device': device}, return_response=True)
-        error = resp.text()
+        error = resp.text
         if not error:
             error = None
         return {'success': resp.status_code == requests.codes.ok,
