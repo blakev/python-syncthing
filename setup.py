@@ -7,10 +7,10 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.0.1',
+    version = '2.0.2',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.19',
+    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.24',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
