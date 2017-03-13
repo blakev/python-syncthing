@@ -15,6 +15,10 @@ Python bindings to the Syncthing REST interface.
 - [Syncthing Forums](https://forum.syncthing.net/)
 
 
+```bash
+$ pip install syncthing
+```
+
 ## Running Tests
 
 The API doctests rely on the following function to run against your instance.
