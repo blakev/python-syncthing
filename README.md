@@ -19,6 +19,32 @@ Python bindings to the Syncthing REST interface.
 $ pip install syncthing
 ```
 
+## Getting Started
+
+```python
+from syncthing import Syncthing
+
+s = Syncthing()
+
+# name spaced by API endpoints
+s.system.connections()
+
+# suports GET/POST semantics
+sync_errors = s.system.errors()
+s.system.clear()
+
+if sync_errors:
+    for e in sync_errors:
+        print(e)
+        
+# supports event long-polling
+event_stream = s.events(limit=10)
+for event in event_stream:
+    # do something with `event`
+    if event_stream.count > 100:
+        event_stream.stop()
+```
+
 ## Running Tests
 
 The API doctests rely on the following function to run against your instance.

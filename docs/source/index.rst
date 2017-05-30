@@ -19,6 +19,7 @@ Reference
 - `Module`_
 - `System Endpoints`_
 - `Database Endpoints`_
+- `Events Endpoints`_
 - `Statistic Endpoints`_
 - `Misc. Endpoints`_
 - `Running Tests`_

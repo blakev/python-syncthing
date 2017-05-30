@@ -731,16 +731,15 @@ class Events(BaseAPI):
         Syncthing provides a simple long polling interface for exposing events
         from the core utility towards a GUI.
 
-        Example:
+        .. code-block:: python
 
-            syncthing = Syncthing()
-            event_stream = syncthing.events(limit=5)
+           syncthing = Syncthing()
+           event_stream = syncthing.events(limit=5)
 
-            for event in event_stream:
-                print(event)
-
-                if event_stream.count > 10:
-                    event_stream.stop()
+           for event in event_stream:
+               print(event)
+               if event_stream.count > 10:
+                   event_stream.stop()
     """
 
     prefix = '/rest/'
