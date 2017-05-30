@@ -2,7 +2,7 @@ python-syncthing
 ================
 
 [![pypi](https://img.shields.io/pypi/v/syncthing.svg?style=flat)](https://pypi.python.org/pypi/syncthing)
-[![Syncthing](https://img.shields.io/badge/syncthing-0.14.24-blue.svg?style=flat)](https://syncthing.net)
+[![Syncthing](https://img.shields.io/badge/syncthing-0.14.29-blue.svg?style=flat)](https://syncthing.net)
 [![Documentation Status](https://readthedocs.org/projects/python-syncthing/badge/?version=latest)](http://python-syncthing.readthedocs.io/en/latest/?badge=latest)
 [![MIT License](https://img.shields.io/github/license/blakev/python-syncthing.svg?style=flat)](https://github.com/blakev/python-syncthing/blob/master/LICENSE)
 
@@ -39,7 +39,7 @@ def _syncthing():
 
 > The MIT License (MIT)
 >
-> Copyright (c) 2015-2016 Blake VandeMerwe
+> Copyright (c) 2015-2017 Blake VandeMerwe
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal

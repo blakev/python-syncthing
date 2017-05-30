@@ -26,9 +26,11 @@ from datetime import datetime, timedelta
 
 import requests
 from six import string_types
+from requests.exceptions import ConnectionError, ConnectTimeout
 
 logger = logging.getLogger(__name__)
 
+NoneType = type(None)
 DEFAULT_TIMEOUT = 10.0
 SYNCTHING_DATE_FMT = '%Y-%m-%dT%H:%M:%S.%f'
 
@@ -131,8 +133,9 @@ class SyncthingError(Exception):
 
 
 class BaseAPI(object):
-    prefix = ''
     """ Placeholder for HTTP REST API URL prefix. """
+
+    prefix = ''
 
     def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
                     is_https=False, ssl_cert_file=None):
@@ -158,16 +161,16 @@ class BaseAPI(object):
             proto='https' if is_https else 'http', host=host, port=port)
         self._base_url = self.url + '{endpoint}'
 
-    def get(self, endpoint, data=None, headers=None, params=None, return_response=False):
+    def get(self, endpoint, data=None, headers=None, params=None, return_response=False, raw_exceptions=False):
         endpoint = self.prefix + endpoint
-        return self._request('GET', endpoint, data, headers, params, return_response)
+        return self._request('GET', endpoint, data, headers, params, return_response, raw_exceptions)
 
-    def post(self, endpoint, data=None, headers=None, params=None, return_response=False):
+    def post(self, endpoint, data=None, headers=None, params=None, return_response=False, raw_exceptions=False):
         endpoint = self.prefix + endpoint
-        return self._request('POST', endpoint, data, headers, params, return_response)
+        return self._request('POST', endpoint, data, headers, params, return_response, raw_exceptions)
 
     def _request(self, method, endpoint, data=None, headers=None, params=None,
-                    return_response=False):
+                    return_response=False, raw_exceptions=False):
         method = method.upper()
 
         endpoint = self._base_url.format(endpoint=endpoint)
@@ -201,6 +204,8 @@ class BaseAPI(object):
                 resp.raise_for_status()
 
         except requests.RequestException as e:
+            if raw_exceptions:
+                raise e
             logger.exception(e)
             raise SyncthingError(e)
 
@@ -232,8 +237,9 @@ class BaseAPI(object):
 
 
 class System(BaseAPI):
-    prefix = '/rest/system/'
     """ HTTP REST endpoint for System calls."""
+
+    prefix = '/rest/system/'
 
     def config(self):
         """ Returns the current configuration.
@@ -551,8 +557,9 @@ class System(BaseAPI):
 
 
 class Database(BaseAPI):
-    prefix = '/rest/db/'
     """ HTTP REST endpoint for Database calls."""
+
+    prefix = '/rest/db/'
 
     def browse(self, folder, levels=None, prefix=None):
         """ Returns the directory tree of the global model.
@@ -718,9 +725,137 @@ class Database(BaseAPI):
         return self.get('status', params={'folder': folder})
 
 
+class Events(BaseAPI):
+    """ HTTP REST endpoints for Event based calls.
+
+        Syncthing provides a simple long polling interface for exposing events
+        from the core utility towards a GUI.
+
+        Example:
+
+            syncthing = Syncthing()
+            event_stream = syncthing.events(limit=5)
+
+            for event in event_stream:
+                print(event)
+
+                if event_stream.count > 10:
+                    event_stream.stop()
+    """
+
+    prefix = '/rest/'
+
+    def __init__(self, *args, last_seen_id=None, filters=None, limit=None, **kwargs):
+        if 'timeout' not in kwargs:
+            # increase our timeout to account for long polling.
+            # this will reduce the number of timed-out connections, which are
+            # swallowed by the library anyway
+            kwargs['timeout'] = 60.0  #seconds
+
+        super(Events, self).__init__(*args, **kwargs)
+        self._last_seen_id = last_seen_id or 0
+        self._filters = filters
+        self._limit = limit
+
+        self._count = 0
+        self.blocking = True
+
+    @property
+    def count(self):
+        """ The number of events that have been processed by this event stream instance.
+
+            Returns:
+                int
+        """
+        return self._count
+
+    def disk_events(self):
+        """ Blocking generator of disk related events. Each event is represented
+            as a ``dict`` with metadata.
+
+            Returns:
+                generator[dict]
+        """
+        for event in self._events('events/disk', None, self._limit):
+            yield event
+
+    def stop(self):
+        """ Breaks the while-loop while the generator is polling for event
+            changes.
+
+            Returns:
+                  None
+        """
+        self.blocking = False
+
+    def _events(self, using_url, filters=None, limit=None):
+        """ A long-polling method that queries Syncthing for events..
+
+            Args:
+                using_url (str): REST HTTP endpoint
+                filters (List[str]): Creates an "event group" in Syncthing to only
+                    receive events that have been subscribed to.
+                limit (int): The number of events to query in the history
+                    to catch up to the current state.
+
+            Returns:
+                generator[dict]
+        """
+
+        # coerce
+        if not isinstance(limit, (int, NoneType)):
+            limit = None
+
+        # coerce
+        if filters is None:
+            filters = []
+
+        # format our list into the correct expectation of a single string with commas
+        if isinstance(filters, string_types):
+            filters = filters.split(',')
+
+        # reset the state if the loop was broken with `stop`
+        if not self.blocking:
+            self.blocking = True
+
+        # block/long-poll for updates to the events api
+        while self.blocking:
+            params = {
+                'since': self._last_seen_id,
+                'limit': limit,
+            }
+
+            if filters:
+                params['events'] = ','.join(map(str, filters))
+
+            try:
+                data = self.get(using_url, params=params, raw_exceptions=True)
+            except (ConnectTimeout, ConnectionError) as e:
+                # swallow timeout errors for long polling
+                data = None
+            except Exception as e:
+                raise SyncthingError(e)
+
+            if data:
+                # update our last_seen_id to increment our event counter forward
+                self._last_seen_id = data[-1]['id']
+                for event in data:
+                    # handle potentially multiple events returned in a list
+                    self._count += 1
+                    yield event
+
+    def __iter__(self):
+        """ Helper interface for :obj:`._events` """
+        for event in self._events('events', self._filters, self._limit):
+            yield event
+
+
+
+
 class Statistics(BaseAPI):
-    prefix = '/rest/stats/'
     """ HTTP REST endpoint for Statistic calls."""
+
+    prefix = '/rest/stats/'
 
     def device(self):
         """ Returns general statistics about devices.
@@ -744,8 +879,9 @@ class Statistics(BaseAPI):
 
 
 class Misc(BaseAPI):
-    prefix = '/rest/svc/'
     """ HTTP REST endpoint for Miscelaneous calls."""
+
+    prefix = '/rest/svc/'
 
     def device_id(self, id_):
         """ Verifies and formats a device ID. Accepts all currently valid formats
@@ -857,6 +993,9 @@ class Syncthing(object):
     def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
                     is_https=False, ssl_cert_file=None):
 
+        # save this for deferred api sub instances
+        self.__api_key = api_key
+
         self.api_key = api_key
         self.host = host
         self.port = port
@@ -864,7 +1003,7 @@ class Syncthing(object):
         self.is_https = is_https
         self.ssl_cert_file = ssl_cert_file
 
-        kwargs = {
+        self.__kwargs = kwargs = {
             'host': host, 'port': port, 'timeout': timeout, 'is_https': is_https,
                 'ssl_cert_file': ssl_cert_file
         }
@@ -873,6 +1012,11 @@ class Syncthing(object):
         self.database = self.db = Database(api_key, **kwargs)
         self.stats = Statistics(api_key, **kwargs)
         self.misc = Misc(api_key, **kwargs)
+
+    def events(self, last_seen_id=None, filters=None, **kwargs):
+        kw = dict(self.__kwargs)
+        kw.update(kwargs)
+        return Events(self.__api_key, last_seen_id=last_seen_id, filters=filters, **kw)
 
 
 if __name__ == "__main__":
