@@ -45,6 +45,13 @@ Database Endpoints
    :members:
    :undoc-members:
 
+Events Endpoints
+----------------
+
+.. autoclass:: syncthing.Events()
+   :members:
+   :undoc-members:
+
 Statistic Endpoints
 -------------------
 
