@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# ~*~ coding: utf-8 ~*~
+# >>
+#   blake, python-syncthing
+# <<
+
 from __future__ import unicode_literals
 
 import os

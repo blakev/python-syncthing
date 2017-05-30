@@ -1,20 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-#
-# Created by: Blake on 5/7/2015 at 11:57 AM
 
 from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.0.2',
+    version = '2.1',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.24',
+    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.29',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
-        'requests>=2.9',
+        'requests>=2.17',
         'six==1.10.0'
     ],
     packages = [
