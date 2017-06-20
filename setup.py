@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.1',
+    version = '2.1.1',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
     description = 'Python bindings to the Syncthing REST interface, targeting v0.14.29',
