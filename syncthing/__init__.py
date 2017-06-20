@@ -744,14 +744,14 @@ class Events(BaseAPI):
 
     prefix = '/rest/'
 
-    def __init__(self, *args, last_seen_id=None, filters=None, limit=None, **kwargs):
+    def __init__(self, api_key, last_seen_id=None, filters=None, limit=None, *args, **kwargs):
         if 'timeout' not in kwargs:
             # increase our timeout to account for long polling.
             # this will reduce the number of timed-out connections, which are
             # swallowed by the library anyway
             kwargs['timeout'] = 60.0  #seconds
 
-        super(Events, self).__init__(*args, **kwargs)
+        super(Events, self).__init__(api_key, *args, **kwargs)
         self._last_seen_id = last_seen_id or 0
         self._filters = filters
         self._limit = limit
@@ -1015,7 +1015,7 @@ class Syncthing(object):
     def events(self, last_seen_id=None, filters=None, **kwargs):
         kw = dict(self.__kwargs)
         kw.update(kwargs)
-        return Events(self.__api_key, last_seen_id=last_seen_id, filters=filters, **kw)
+        return Events(api_key=self.__api_key, last_seen_id=last_seen_id, filters=filters, **kw)
 
 
 if __name__ == "__main__":
