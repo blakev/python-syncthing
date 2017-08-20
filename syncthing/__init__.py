@@ -642,7 +642,7 @@ class Database(BaseAPI):
         """
         if not patterns:
             return {}
-        data = {'ignores': list(patterns)}
+        data = {'ignore': list(patterns)}
         return self.post('ignores', params={'folder': folder}, data=data)
 
     def need(self, folder, page=None, perpage=None):
