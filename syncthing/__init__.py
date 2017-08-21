@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 # >>
-#     Copyright (c) 2016, Blake VandeMerwe
+#     Copyright (c) 2016-2017, Blake VandeMerwe
 #
 #       Permission is hereby granted, free of charge, to any person obtaining
 #       a copy of this software and associated documentation files
@@ -847,8 +847,6 @@ class Events(BaseAPI):
         """ Helper interface for :obj:`._events` """
         for event in self._events('events', self._filters, self._limit):
             yield event
-
-
 
 
 class Statistics(BaseAPI):
