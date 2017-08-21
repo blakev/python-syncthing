@@ -5,14 +5,14 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.1.1',
+    version = '2.1.2',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.29',
+    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.36',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
-        'requests>=2.17',
+        'requests>=2.17.3',
         'six==1.10.0'
     ],
     packages = [
@@ -35,6 +35,8 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: System :: Archiving :: Mirroring'
     ],
 )
