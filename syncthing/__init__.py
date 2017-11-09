@@ -22,9 +22,9 @@ import json
 import logging
 import warnings
 from collections import namedtuple
-from datetime import datetime, timedelta
 
 import requests
+from dateutil.parser import parse as parse_datetime
 from six import string_types
 from requests.exceptions import ConnectionError, ConnectTimeout
 
@@ -32,12 +32,11 @@ logger = logging.getLogger(__name__)
 
 NoneType = type(None)
 DEFAULT_TIMEOUT = 10.0
-SYNCTHING_DATE_FMT = '%Y-%m-%dT%H:%M:%S.%f'
 
 __all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
            'Database', 'Statistics', 'Syncthing',
            # methods
-           'keys_to_datetime', 'parse_datetime']
+           'keys_to_datetime']
 
 ErrorEvent = namedtuple('ErrorEvent', 'when, message')
 """ Tuple object used to process error lists more easily, instead of by two-key dictionaries. """
@@ -49,45 +48,6 @@ def _syncthing():
     IS_HTTPS = bool(int(os.getenv('SYNCTHING_HTTPS', '0')))
     SSL_CERT_FILE = os.getenv('SYNCTHING_CERT_FILE')
     return Syncthing(KEY, HOST, PORT, 10.0, IS_HTTPS, SSL_CERT_FILE)
-
-
-def parse_datetime(s, date_format=SYNCTHING_DATE_FMT):
-    """ Converts the time-string format from Syncthing into
-        a valid :obj:`.DateTime` object.
-
-        Args:
-            s (str): the time-string that needs to be formatted.
-            date_format (str): the datetime mask that's applied to
-                ``s`` to isolate datetime components.
-
-        Returns:
-            :py:class:`~datetime.datetime.DateTime`
-
-        >>> parse_datetime(None) is None
-        True
-        >>> parse_datetime('')
-        ''
-        >>> parse_datetime('2016-06-06T19:41:43.039284753+02:00')
-        datetime.datetime(2016, 6, 6, 21, 41, 43, 39284)
-        >>> parse_datetime('2016-06-06T19:41:43.039284753-02:00')
-        datetime.datetime(2016, 6, 6, 17, 41, 43, 39284)
-        >>> parse_datetime('2016-06-06T19:41:43.039284000-02:00')
-        datetime.datetime(2016, 6, 6, 17, 41, 43, 39284)
-        >>> parse_datetime('2016-06-06T19:41:43.039284')
-        datetime.datetime(2016, 6, 6, 19, 41, 43, 39284)
-    """
-    if not s:
-        return s
-    obj = datetime.strptime(s[0:26], date_format)
-    offset = s[-6:].replace(':', '')
-    if offset[0] in '+-':
-        hours, minutes = offset[1:3], offset[3:]
-        delta = timedelta(hours=int(hours), minutes=int(minutes))
-        if offset[0] == '+':
-            obj += delta
-        else:
-            obj -= delta
-    return obj
 
 
 def keys_to_datetime(obj, *keys):
