@@ -26,7 +26,6 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 
 import requests
-from six import string_types
 from requests.exceptions import ConnectionError, ConnectTimeout
 
 PY2 = sys.version_info[0] < 3
