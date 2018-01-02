@@ -19,4 +19,5 @@
 __title__ = 'python-syncthing'
 __author__ = 'Blake VandeMerwe'
 __authoremail__ = 'blakev@null.net'
+__version__ = '2.2.0'
 
