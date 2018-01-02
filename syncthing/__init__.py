@@ -18,6 +18,7 @@
 from __future__ import unicode_literals
 
 import os
+import sys
 import json
 import logging
 import warnings
@@ -28,7 +29,15 @@ import requests
 from six import string_types
 from requests.exceptions import ConnectionError, ConnectTimeout
 
+PY2 = sys.version_info[0] < 3
+
+if PY2:
+    string_types = (basestring,)
+else:
+    string_types = (str,)
+
 logger = logging.getLogger(__name__)
+
 
 NoneType = type(None)
 DEFAULT_TIMEOUT = 10.0
@@ -40,7 +49,8 @@ __all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
            'keys_to_datetime', 'parse_datetime']
 
 ErrorEvent = namedtuple('ErrorEvent', 'when, message')
-""" Tuple object used to process error lists more easily, instead of by two-key dictionaries. """
+"""tuple[datetime.datetime,str]: used to process error lists more easily, 
+instead of by two-key dictionaries. """
 
 def _syncthing():
     KEY = os.getenv('SYNCTHING_API_KEY')
@@ -108,7 +118,8 @@ def keys_to_datetime(obj, *keys):
         >>> a = {}
         >>> id(keys_to_datetime(a)) == id(a)
         True
-        >>> a = {'one': '2016-06-06T19:41:43.039284', 'two': '2016-06-06T19:41:43.039284'}
+        >>> a = {'one': '2016-06-06T19:41:43.039284',
+                 'two': '2016-06-06T19:41:43.039284'}
         >>> keys_to_datetime(a) == a
         True
         >>> keys_to_datetime(a, 'one')['one']
@@ -129,7 +140,7 @@ def keys_to_datetime(obj, *keys):
 
 
 class SyncthingError(Exception):
-    """ Base Syncthing Exception class that all non-assert errors will raise from. """
+    """Base Syncthing Exception class all non-assert errors will raise from."""
 
 
 class BaseAPI(object):
@@ -137,15 +148,17 @@ class BaseAPI(object):
 
     prefix = ''
 
-    def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
-                    is_https=False, ssl_cert_file=None):
+    def __init__(self, api_key, host='localhost', port=8384,
+                 timeout=DEFAULT_TIMEOUT, is_https=False, ssl_cert_file=None):
 
         if is_https and not ssl_cert_file:
             logger.warning('using https without specifying ssl_cert_file')
 
         if ssl_cert_file:
             if not os.path.exists(ssl_cert_file):
-                raise SyncthingError('ssl_cert_file does not exist at location, %s' % ssl_cert_file)
+                raise SyncthingError(
+                    'ssl_cert_file does not exist at location, %s' %
+                    ssl_cert_file)
 
         self.api_key = api_key
         self.host = host
@@ -161,13 +174,17 @@ class BaseAPI(object):
             proto='https' if is_https else 'http', host=host, port=port)
         self._base_url = self.url + '{endpoint}'
 
-    def get(self, endpoint, data=None, headers=None, params=None, return_response=False, raw_exceptions=False):
+    def get(self, endpoint, data=None, headers=None, params=None,
+            return_response=False, raw_exceptions=False):
         endpoint = self.prefix + endpoint
-        return self._request('GET', endpoint, data, headers, params, return_response, raw_exceptions)
+        return self._request('GET', endpoint, data, headers, params,
+                             return_response, raw_exceptions)
 
-    def post(self, endpoint, data=None, headers=None, params=None, return_response=False, raw_exceptions=False):
+    def post(self, endpoint, data=None, headers=None, params=None,
+             return_response=False, raw_exceptions=False):
         endpoint = self.prefix + endpoint
-        return self._request('POST', endpoint, data, headers, params, return_response, raw_exceptions)
+        return self._request('POST', endpoint, data, headers, params,
+                             return_response, raw_exceptions)
 
     def _request(self, method, endpoint, data=None, headers=None, params=None,
                     return_response=False, raw_exceptions=False):
@@ -176,11 +193,12 @@ class BaseAPI(object):
         endpoint = self._base_url.format(endpoint=endpoint)
 
         if method not in ('GET', 'POST', 'PUT', 'DELETE'):
-            raise SyncthingError('unsupported http verb requested, %s' % method)
+            raise SyncthingError(
+                'unsupported http verb requested, %s' % method)
 
         if data is None:
             data = {}
-        assert isinstance(data, (string_types, dict))
+        assert isinstance(data, string_types) or isinstance(data, dict)
 
         if headers is None:
             headers = {}
@@ -218,22 +236,22 @@ class BaseAPI(object):
                                 resp.url, resp.text)
                 return resp
 
-            if 'json' in resp.headers.get('Content-Type', 'text/plain').lower():
-                j =  resp.json()
+            if 'json' in resp.headers.get('Content-Type', 'text/plain')\
+                    .lower():
+                json_data = resp.json()
 
             else:
                 content = resp.content.decode('utf-8')
                 if content and content[0] == '{' and content[-1] == '}':
-                    j = json.loads(content)
+                    json_data = json.loads(content)
 
                 else:
                     return content
 
-            if isinstance(j, dict) and j.get('error'):
-                api_err = j.get('error')
+            if isinstance(json_data, dict) and j.get('error'):
+                api_err = json_data.get('error')
                 raise SyncthingError(api_err)
-
-            return j
+            return json_data
 
 
 class System(BaseAPI):
@@ -263,8 +281,9 @@ class System(BaseAPI):
 
     def set_config(self, config, and_restart=False):
         """ Post the full contents of the configuration, in the same format as
-        returned by :func:`.config`. The configuration will be saved to disk and
-        the ``configInSync`` flag set to ``False``. Restart Syncthing to activate."""
+        returned by :func:`.config`. The configuration will be saved to disk
+        and the ``configInSync`` flag set to ``False``. Restart Syncthing to
+        activate."""
         assert isinstance(config, dict)
         self.post('config', data=config)
         if and_restart:
@@ -408,10 +427,10 @@ class System(BaseAPI):
                 None
 
             >>> s = _syncthing()
-            >>> s.system.show_error('my error message')
+            >>> s.system.show_error('my error msg')
             >>> s.system.errors()[0]
             ... # doctest: +ELLIPSIS
-            ErrorEvent(when=datetime.datetime(...), message='"my error message"')
+            ErrorEvent(when=datetime.datetime(...), message='"my error msg"')
             >>> s.system.clear_errors()
             >>> s.system.errors()
             []
@@ -436,7 +455,8 @@ class System(BaseAPI):
             Returns:
                 dict: with keys ``success`` and ``error``.
         """
-        resp = self.post('pause', params={'device': device}, return_response=True)
+        resp = self.post('pause', params={'device': device},
+                         return_response=True)
         error = resp.text
         if not error:
             error = None
@@ -496,7 +516,8 @@ class System(BaseAPI):
             Returns:
                 dict: with keys ``success`` and ``error``.
         """
-        resp = self.post('resume', params={'device': device}, return_response=True)
+        resp = self.post('resume', params={'device': device},
+                         return_response=True)
         error = resp.text
         if not error:
             error = None
@@ -531,7 +552,7 @@ class System(BaseAPI):
         return self.get('upgrade')
 
     def can_upgrade(self):
-        """ Returns whether there's a new version than the one currently running.
+        """ Returns when there's a newer version than the instance running.
 
             Returns:
                 bool
@@ -566,7 +587,8 @@ class Database(BaseAPI):
 
             Directories are always JSON objects (map/dictionary), and files are
             always arrays of modification time and size. The first integer is
-            the files modification time, and the second integer is the file size.
+            the files modification time, and the second integer is the file
+            size.
 
             Args:
                 folder (str): The root folder to traverse.
@@ -595,8 +617,10 @@ class Database(BaseAPI):
             Returs:
                 int
         """
-        return self.get('completion', params={'folder': folder,
-                                              'device': device}).get('completion', None)
+        return self.get(
+            'completion',
+            params={'folder': folder, 'device': device}
+        ).get('completion', None)
 
     def file(self, folder, file_):
         """ Returns most data available about a given file, including version
@@ -613,14 +637,16 @@ class Database(BaseAPI):
                                         'file': file_})
 
     def ignores(self, folder):
-        """ Returns the content of the ``.stignore`` as the ignore field. A second
-            field, expanded, provides a list of strings which represent globbing
-            patterns described by gobwas/glob (based on standard wildcards) that
-            match the patterns in ``.stignore`` and all the includes.
+        """ Returns the content of the ``.stignore`` as the ignore field. A
+        second field, expanded, provides a list of strings which represent
+        globbing patterns described by gobwas/glob (based on standard
+        wildcards) that match the patterns in ``.stignore`` and all the
+        includes.
 
-            If appropriate these globs are prepended by the following modifiers:
-            ``!`` to negate the glob, ``(?i)`` to do case insensitive matching and
-            ``(?d)`` to enable removing of ignored files in an otherwise empty directory.
+        If appropriate these globs are prepended by the following modifiers:
+        ``!`` to negate the glob, ``(?i)`` to do case insensitive matching and
+        ``(?d)`` to enable removing of ignored files in an otherwise empty
+        directory.
 
             Args:
                 folder
@@ -646,13 +672,15 @@ class Database(BaseAPI):
         return self.post('ignores', params={'folder': folder}, data=data)
 
     def need(self, folder, page=None, perpage=None):
-        """ Returns lists of files which are needed by this device in order for it
-            to become in sync.
+        """ Returns lists of files which are needed by this device in order
+        for it to become in sync.
 
             Args:
                 folder (str):
-                page (int): If defined applies pagination accross the collection of results.
-                perpage (int): If defined applies pagination across the collection of results.
+                page (int): If defined applies pagination accross the
+                    collection of results.
+                perpage (int): If defined applies pagination across the
+                    collection of results.
 
             Returns:
                 dict
@@ -688,13 +716,14 @@ class Database(BaseAPI):
                                   'file': file_})
 
     def scan(self, folder, sub=None, next_=None):
-        """ Request immediate rescan of a folder, or a specific path within a folder.
+        """ Request immediate rescan of a folder, or a specific path within a
+        folder.
 
             Args:
                 folder (str): Folder ID.
-                sub (str): Path relative to the folder root. If sub is omitted the entire
-                    folder is scanned for changes, otherwise only the given path children
-                    are scanned.
+                sub (str): Path relative to the folder root. If sub is omitted
+                    the entire folder is scanned for changes, otherwise only
+                    the given path children are scanned.
                 next_ (int): Delays Syncthing's automated rescan interval for
                     a given amount of seconds.
 
@@ -744,7 +773,8 @@ class Events(BaseAPI):
 
     prefix = '/rest/'
 
-    def __init__(self, api_key, last_seen_id=None, filters=None, limit=None, *args, **kwargs):
+    def __init__(self, api_key, last_seen_id=None, filters=None, limit=None,
+                 *args, **kwargs):
         if 'timeout' not in kwargs:
             # increase our timeout to account for long polling.
             # this will reduce the number of timed-out connections, which are
@@ -761,7 +791,7 @@ class Events(BaseAPI):
 
     @property
     def count(self):
-        """ The number of events that have been processed by this event stream instance.
+        """ The number of events that have been processed by this event stream.
 
             Returns:
                 int
@@ -769,8 +799,8 @@ class Events(BaseAPI):
         return self._count
 
     def disk_events(self):
-        """ Blocking generator of disk related events. Each event is represented
-            as a ``dict`` with metadata.
+        """ Blocking generator of disk related events. Each event is
+        represented as a ``dict`` with metadata.
 
             Returns:
                 generator[dict]
@@ -792,8 +822,8 @@ class Events(BaseAPI):
 
             Args:
                 using_url (str): REST HTTP endpoint
-                filters (List[str]): Creates an "event group" in Syncthing to only
-                    receive events that have been subscribed to.
+                filters (List[str]): Creates an "event group" in Syncthing to
+                    only receive events that have been subscribed to.
                 limit (int): The number of events to query in the history
                     to catch up to the current state.
 
@@ -809,7 +839,7 @@ class Events(BaseAPI):
         if filters is None:
             filters = []
 
-        # format our list into the correct expectation of a single string with commas
+        # format our list into the correct expectation of string with commas
         if isinstance(filters, string_types):
             filters = filters.split(',')
 
@@ -836,7 +866,7 @@ class Events(BaseAPI):
                 raise SyncthingError(e)
 
             if data:
-                # update our last_seen_id to increment our event counter forward
+                # update our last_seen_id to move our event counter forward
                 self._last_seen_id = data[-1]['id']
                 for event in data:
                     # handle potentially multiple events returned in a list
@@ -881,31 +911,31 @@ class Misc(BaseAPI):
     prefix = '/rest/svc/'
 
     def device_id(self, id_):
-        """ Verifies and formats a device ID. Accepts all currently valid formats
-            (52 or 56 characters with or without separators, upper or lower case,
-            with trivial substitutions). Takes one parameter, id, and returns
-            either a valid device ID in modern format, or an error.
+        """ Verifies and formats a device ID. Accepts all currently valid
+        formats (52 or 56 characters with or without separators, upper or lower
+        case, with trivial substitutions). Takes one parameter, id, and returns
+        either a valid device ID in modern format, or an error.
 
-            Args:
-                id_ (str)
+        Args:
+            id_ (str)
 
-            Raises:
-                SyncthingError: when ``id_`` is an invalid length.
+        Raises:
+            SyncthingError: when ``id_`` is an invalid length.
 
-            Returns:
-                str
+        Returns:
+            str
         """
         return self.get('deviceid', params={'id': id_}).get('id')
 
     def language(self):
-        """ Returns a list of canonicalized localization codes, as picked up from
-            the Accept-Language header sent by the browser. By default, this API
-            will return a single element that's empty; however calling
-            :func:`Misc.get` directly with `lang` you can set specific headers
-            to get values back as intended.
+        """ Returns a list of canonicalized localization codes, as picked up
+        from the Accept-Language header sent by the browser. By default, this
+        API will return a single element that's empty; however calling
+        :func:`Misc.get` directly with `lang` you can set specific headers to
+        get values back as intended.
 
-            Returns:
-                List[str]
+        Returns:
+            List[str]
 
             >>> s = _syncthing()
             >>> len(s.misc.language())
@@ -945,7 +975,10 @@ class Misc(BaseAPI):
             >>> all([c in all_letters for c in s.misc.random_string(1024)])
             True
         """
-        return self.get('random/string', params={'length': length}).get('random', None)
+        return self.get(
+            'random/string',
+            params={'length': length}
+        ).get('random', None)
 
     def report(self):
         """ Returns the data sent in the anonymous usage report.
@@ -987,8 +1020,8 @@ class Syncthing(object):
             - attribute :attr:`.sys` is an alias of :attr:`.system`
     """
 
-    def __init__(self, api_key, host='localhost', port=8384, timeout=DEFAULT_TIMEOUT,
-                    is_https=False, ssl_cert_file=None):
+    def __init__(self, api_key, host='localhost', port=8384,
+                 timeout=DEFAULT_TIMEOUT, is_https=False, ssl_cert_file=None):
 
         # save this for deferred api sub instances
         self.__api_key = api_key
@@ -1001,8 +1034,11 @@ class Syncthing(object):
         self.ssl_cert_file = ssl_cert_file
 
         self.__kwargs = kwargs = {
-            'host': host, 'port': port, 'timeout': timeout, 'is_https': is_https,
-                'ssl_cert_file': ssl_cert_file
+            'host': host,
+            'port': port,
+            'timeout': timeout,
+            'is_https': is_https,
+            'ssl_cert_file': ssl_cert_file
         }
 
         self.system = self.sys = System(api_key, **kwargs)
@@ -1013,7 +1049,10 @@ class Syncthing(object):
     def events(self, last_seen_id=None, filters=None, **kwargs):
         kw = dict(self.__kwargs)
         kw.update(kwargs)
-        return Events(api_key=self.__api_key, last_seen_id=last_seen_id, filters=filters, **kw)
+        return Events(api_key=self.__api_key,
+                      last_seen_id=last_seen_id,
+                      filters=filters,
+                      **kw)
 
 
 if __name__ == "__main__":
