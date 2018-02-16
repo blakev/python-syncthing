@@ -247,7 +247,7 @@ class BaseAPI(object):
                 else:
                     return content
 
-            if isinstance(json_data, dict) and j.get('error'):
+            if isinstance(json_data, dict) and json_data.get('error'):
                 api_err = json_data.get('error')
                 raise SyncthingError(api_err)
             return json_data
