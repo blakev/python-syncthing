@@ -1,9 +1,20 @@
-#!/usr/bin/env python
-# ~*~ coding: utf-8 ~*~
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
 # >>
-#   blake, python-syncthing
+#     Copyright (c) 2016-2017, Blake VandeMerwe
+#
+#       Permission is hereby granted, free of charge, to any person obtaining
+#       a copy of this software and associated documentation files
+#       (the "Software"), to deal in the Software without restriction,
+#       including without limitation the rights to use, copy, modify, merge,
+#       publish, distribute, sublicense, and/or sell copies of the Software,
+#       and to permit persons to whom the Software is furnished to do so, subject
+#       to the following conditions: The above copyright notice and this permission
+#       notice shall be included in all copies or substantial portions
+#       of the Software.
+#
+#     python-syncthing, 2016
 # <<
-
 from __future__ import unicode_literals
 
 import os
