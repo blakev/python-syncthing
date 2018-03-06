@@ -5,16 +5,22 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.1.2',
+    version = '2.2.0',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
     description = 'Python bindings to the Syncthing REST interface, targeting v0.14.36',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
-        'requests>=2.17.3',
-        'six==1.10.0'
+        'requests==2.18.4',
     ],
+    extras_require = {
+        'dev': [
+            'sphinx',
+            'sphinxcontrib-napoleon',
+            'sphinx_rtd_theme'
+        ]
+    },
     packages = [
         'syncthing'
     ],
