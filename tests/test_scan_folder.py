@@ -1,7 +1,19 @@
-#!/usr/bin/env python
-# ~*~ coding: utf-8 ~*~
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
 # >>
-#   blake, python-syncthing
+#     Copyright (c) 2016-2017, Blake VandeMerwe
+#
+#       Permission is hereby granted, free of charge, to any person obtaining
+#       a copy of this software and associated documentation files
+#       (the "Software"), to deal in the Software without restriction,
+#       including without limitation the rights to use, copy, modify, merge,
+#       publish, distribute, sublicense, and/or sell copies of the Software,
+#       and to permit persons to whom the Software is furnished to do so, subject
+#       to the following conditions: The above copyright notice and this permission
+#       notice shall be included in all copies or substantial portions
+#       of the Software.
+#
+#     python-syncthing, 2016
 # <<
 
 import os
@@ -36,7 +48,8 @@ class TestScanFolder(unittest.TestCase):
         assert s.stats.folder()[use]['lastScan'] > last_scan
 
     def test_folder_scan_sub(self):
-        last_scan = s.stats.folder()['default']['lastScan']
-        ret = s.database.scan('default', 'docs')
+        folder = '2vw2z-xwpvk'
+        last_scan = s.stats.folder()[folder]['lastScan']
+        ret = s.database.scan(folder, 'docs')
         assert isinstance(ret, string_types)
-        assert s.stats.folder()['default']['lastScan'] > last_scan
+        assert s.stats.folder()[folder]['lastScan'] > last_scan

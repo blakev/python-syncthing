@@ -25,15 +25,20 @@ import warnings
 from collections import namedtuple
 
 import requests
-from dateutil.parser import parse as parse_datetime
+from dateutil.parser import parse as dateutil_parser
 from requests.exceptions import ConnectionError, ConnectTimeout
 
 PY2 = sys.version_info[0] < 3
 
 if PY2:
-    string_types = (basestring,)
+    string_types = (basestring, str, unicode,)
+    def reraise(msg, base):
+        raise Syncthing(msg)
+
 else:
     string_types = (str,)
+    def reraise(msg, exc):
+        raise SyncthingError(msg) from exc
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +49,7 @@ DEFAULT_TIMEOUT = 10.0
 __all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
            'Database', 'Statistics', 'Syncthing',
            # methods
-           'keys_to_datetime']
+           'keys_to_datetime', 'parse_datetime']
 
 ErrorEvent = namedtuple('ErrorEvent', 'when, message')
 """tuple[datetime.datetime,str]: used to process error lists more easily, 
@@ -96,6 +101,28 @@ def keys_to_datetime(obj, *keys):
             continue
         obj[k] = parse_datetime(v)
     return obj
+
+
+def parse_datetime(s, **kwargs):
+    """ Converts a time-string into a valid
+    :py:class:`~datetime.datetime.DateTime` object.
+
+        Args:
+            s (str): string to be formatted.
+
+        ``**kwargs`` is passed directly to :func:`.dateutil_parser`.
+
+        Returns:
+            :py:class:`~datetime.datetime.DateTime`
+    """
+    if not s:
+        return None
+    try:
+        ret = dateutil_parser(s, **kwargs)
+    except (OverflowError, TypeError, ValueError) as e:
+        logger.exception(e, exc_info=True)
+        reraise('datetime parsing error from %s' % s, e)
+    return ret
 
 
 class SyncthingError(Exception):
@@ -184,7 +211,7 @@ class BaseAPI(object):
             if raw_exceptions:
                 raise e
             logger.exception(e)
-            raise SyncthingError(e)
+            reraise('http request error', e)
 
         else:
             if return_response:
@@ -217,6 +244,21 @@ class System(BaseAPI):
     """ HTTP REST endpoint for System calls."""
 
     prefix = '/rest/system/'
+
+    def browse(self, path=None):
+        """ Returns a list of directories matching the path given.
+
+        Args:
+            path (str): glob pattern.
+
+        Returns:
+            List[str]
+        """
+        params = None
+        if path:
+            assert isinstance(path, string_types)
+            params = {'current': path}
+        return self.get('browse', params=params)
 
     def config(self):
         """ Returns the current configuration.
@@ -822,7 +864,7 @@ class Events(BaseAPI):
                 # swallow timeout errors for long polling
                 data = None
             except Exception as e:
-                raise SyncthingError(e)
+                reraise('', e)
 
             if data:
                 # update our last_seen_id to move our event counter forward
