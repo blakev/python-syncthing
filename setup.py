@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.3.0',
+    version = '2.3.1',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
     description = 'Python bindings to the Syncthing REST interface, targeting v0.14.44',
@@ -40,10 +40,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: System :: Archiving :: Mirroring'
     ],
 )
