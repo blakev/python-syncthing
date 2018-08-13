@@ -688,7 +688,7 @@ class Database(BaseAPI):
         """
         assert isinstance(page, int) or page is None
         assert isinstance(perpage, int) or perpage is None
-        self.get('need', params={'folder': folder,
+        return self.get('need', params={'folder': folder,
                                  'page': page,
                                  'perpage': perpage})
 
