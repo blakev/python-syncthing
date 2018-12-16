@@ -137,9 +137,6 @@ class BaseAPI(object):
     def __init__(self, api_key, host='localhost', port=8384,
                  timeout=DEFAULT_TIMEOUT, is_https=False, ssl_cert_file=None):
 
-        if is_https and not ssl_cert_file:
-            logger.warning('using https without specifying ssl_cert_file')
-
         if ssl_cert_file:
             if not os.path.exists(ssl_cert_file):
                 raise SyncthingError(
@@ -152,7 +149,6 @@ class BaseAPI(object):
         self.port = port
         self.ssl_cert_file = ssl_cert_file
         self.timeout = timeout
-        self.verify = True if ssl_cert_file else False
         self._headers = {
             'X-API-Key': api_key
         }
@@ -199,7 +195,6 @@ class BaseAPI(object):
                 data=json.dumps(data),
                 params=params,
                 timeout=self.timeout,
-                verify=self.verify,
                 cert=self.ssl_cert_file,
                 headers=headers
             )
