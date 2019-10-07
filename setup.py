@@ -13,7 +13,7 @@ setup(
     license = 'The MIT License',
     install_requires = [
         'python-dateutil==2.6.1',
-        'requests==2.18.4'
+        'requests==2.20.0'
     ],
     extras_require = {
         'dev': [
