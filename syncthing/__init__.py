@@ -149,6 +149,7 @@ class BaseAPI(object):
         self.port = port
         self.ssl_cert_file = ssl_cert_file
         self.timeout = timeout
+        self.verify = True if ssl_cert_file or is_https else False
         self._headers = {
             'X-API-Key': api_key
         }
