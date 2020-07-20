@@ -12,8 +12,8 @@ setup(
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
-        'python-dateutil==2.6.1',
-        'requests==2.20.0'
+        'python-dateutil==2.8.1',
+        'requests==2.24.0'
     ],
     extras_require = {
         'dev': [
@@ -41,6 +41,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: System :: Archiving :: Mirroring'
     ],
 )
