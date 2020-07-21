@@ -26,7 +26,7 @@ from collections import namedtuple
 
 import requests
 from dateutil.parser import parse as dateutil_parser
-from requests.exceptions import ConnectionError, ConnectTimeout
+from requests.exceptions import ConnectionError, Timeout
 
 PY2 = sys.version_info[0] < 3
 
@@ -149,6 +149,7 @@ class BaseAPI(object):
         self.port = port
         self.ssl_cert_file = ssl_cert_file
         self.timeout = timeout
+        self.verify = True if ssl_cert_file or is_https else False
         self._headers = {
             'X-API-Key': api_key
         }
@@ -855,7 +856,7 @@ class Events(BaseAPI):
 
             try:
                 data = self.get(using_url, params=params, raw_exceptions=True)
-            except (ConnectTimeout, ConnectionError) as e:
+            except (ConnectionError, Timeout) as e:
                 # swallow timeout errors for long polling
                 data = None
             except Exception as e:
