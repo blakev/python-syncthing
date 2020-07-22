@@ -26,7 +26,7 @@ from collections import namedtuple
 
 import requests
 from dateutil.parser import parse as dateutil_parser
-from requests.exceptions import ConnectionError, Timeout
+from requests.exceptions import Timeout
 
 PY2 = sys.version_info[0] < 3
 
@@ -120,7 +120,6 @@ def parse_datetime(s, **kwargs):
     try:
         ret = dateutil_parser(s, **kwargs)
     except (OverflowError, TypeError, ValueError) as e:
-        logger.exception(e, exc_info=True)
         reraise('datetime parsing error from %s' % s, e)
     return ret
 
@@ -206,7 +205,6 @@ class BaseAPI(object):
         except requests.RequestException as e:
             if raw_exceptions:
                 raise e
-            logger.exception(e)
             reraise('http request error', e)
 
         else:
@@ -856,7 +854,7 @@ class Events(BaseAPI):
 
             try:
                 data = self.get(using_url, params=params, raw_exceptions=True)
-            except (ConnectionError, Timeout) as e:
+            except Timeout as e:
                 # swallow timeout errors for long polling
                 data = None
             except Exception as e:
