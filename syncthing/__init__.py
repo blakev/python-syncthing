@@ -793,6 +793,15 @@ class Events(BaseAPI):
         """
         return self._count
 
+    @property
+    def last_seen_id(self):
+        """ The id of the last seen event.
+
+            Returns:
+                int
+        """
+        return self._last_seen_id
+
     def disk_events(self):
         """ Blocking generator of disk related events. Each event is
         represented as a ``dict`` with metadata.
@@ -861,12 +870,12 @@ class Events(BaseAPI):
                 reraise('', e)
 
             if data:
-                # update our last_seen_id to move our event counter forward
-                self._last_seen_id = data[-1]['id']
                 for event in data:
                     # handle potentially multiple events returned in a list
                     self._count += 1
                     yield event
+                # update our last_seen_id to move our event counter forward
+                self._last_seen_id = data[-1]['id']
 
     def __iter__(self):
         """ Helper interface for :obj:`._events` """
