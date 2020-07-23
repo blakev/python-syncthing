@@ -27,6 +27,7 @@ from collections import namedtuple
 import requests
 from dateutil.parser import parse as dateutil_parser
 from requests.exceptions import Timeout
+from urllib3.exceptions import TimeoutError
 
 PY2 = sys.version_info[0] < 3
 
@@ -863,7 +864,7 @@ class Events(BaseAPI):
 
             try:
                 data = self.get(using_url, params=params, raw_exceptions=True)
-            except Timeout as e:
+            except (Timeout, TimeoutError) as e:
                 # swallow timeout errors for long polling
                 data = None
             except Exception as e:
