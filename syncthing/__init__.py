@@ -27,6 +27,7 @@ from collections import namedtuple
 import requests
 from dateutil.parser import parse as dateutil_parser
 from requests.exceptions import Timeout
+from urllib3.exceptions import TimeoutError
 
 PY2 = sys.version_info[0] < 3
 
@@ -793,6 +794,15 @@ class Events(BaseAPI):
         """
         return self._count
 
+    @property
+    def last_seen_id(self):
+        """ The id of the last seen event.
+
+            Returns:
+                int
+        """
+        return self._last_seen_id
+
     def disk_events(self):
         """ Blocking generator of disk related events. Each event is
         represented as a ``dict`` with metadata.
@@ -854,19 +864,19 @@ class Events(BaseAPI):
 
             try:
                 data = self.get(using_url, params=params, raw_exceptions=True)
-            except Timeout as e:
+            except (Timeout, TimeoutError) as e:
                 # swallow timeout errors for long polling
                 data = None
             except Exception as e:
                 reraise('', e)
 
             if data:
-                # update our last_seen_id to move our event counter forward
-                self._last_seen_id = data[-1]['id']
                 for event in data:
                     # handle potentially multiple events returned in a list
                     self._count += 1
                     yield event
+                # update our last_seen_id to move our event counter forward
+                self._last_seen_id = data[-1]['id']
 
     def __iter__(self):
         """ Helper interface for :obj:`._events` """
