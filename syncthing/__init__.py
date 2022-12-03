@@ -48,7 +48,7 @@ NoneType = type(None)
 DEFAULT_TIMEOUT = 10.0
 
 __all__ = ['SyncthingError', 'ErrorEvent', 'BaseAPI', 'System',
-           'Database', 'Statistics', 'Syncthing',
+           'Config', 'Cluster', 'Folder', 'Database', 'Statistics', 'Syncthing',
            # methods
            'keys_to_datetime', 'parse_datetime']
 
@@ -169,13 +169,31 @@ class BaseAPI(object):
         return self._request('POST', endpoint, data, headers, params,
                              return_response, raw_exceptions)
 
+    def put(self, endpoint, data=None, headers=None, params=None,
+             return_response=False, raw_exceptions=False):
+        endpoint = self.prefix + endpoint
+        return self._request('PUT', endpoint, data, headers, params,
+                             return_response, raw_exceptions)
+
+    def patch(self, endpoint, data=None, headers=None, params=None,
+             return_response=False, raw_exceptions=False):
+        endpoint = self.prefix + endpoint
+        return self._request('PATCH', endpoint, data, headers, params,
+                             return_response, raw_exceptions)
+
+    def delete(self, endpoint, data=None, headers=None, params=None,
+             return_response=False, raw_exceptions=False):
+        endpoint = self.prefix + endpoint
+        return self._request('DELETE', endpoint, data, headers, params,
+                             return_response, raw_exceptions)
+
     def _request(self, method, endpoint, data=None, headers=None, params=None,
                     return_response=False, raw_exceptions=False):
         method = method.upper()
 
         endpoint = self._base_url.format(endpoint=endpoint)
 
-        if method not in ('GET', 'POST', 'PUT', 'DELETE'):
+        if method not in ('GET', 'POST', 'PUT', 'PATCH', 'DELETE'):
             raise SyncthingError(
                 'unsupported http verb requested, %s' % method)
 
@@ -233,7 +251,6 @@ class BaseAPI(object):
                 api_err = json_data.get('error')
                 raise SyncthingError(api_err)
             return json_data
-
 
 class System(BaseAPI):
     """ HTTP REST endpoint for System calls."""
@@ -442,6 +459,14 @@ class System(BaseAPI):
         """
         return self.get('log')
 
+    def paths(self):
+        """ Returns the path locations used internally for storing configuration, database, and others. 
+
+            Returns:
+                dict
+        """
+        return self.get('paths')
+
     def pause(self, device):
         """ Pause the given device.
 
@@ -572,6 +597,144 @@ class System(BaseAPI):
         """
         return self.get('version')
 
+class Config(BaseAPI):
+    """ HTTP REST endpoint for Config calls."""
+
+    prefix = '/rest/config/'
+
+    def config(self):
+        return self.get('')
+
+    def put_config(self, config):
+        assert isinstance(config, dict)
+        return self.put('', data=config)
+
+    def restart_required(self):
+        return self.get('restart-required')
+
+    def folders(self, id=None):
+        if(id):
+            return self.get('folders/' + id)
+        else:
+            return self.get('folders')
+
+    def put_folders(self, config, id=None):
+        if(id):
+            return self.put('folders/' + id, data=config)
+        else:
+            return self.put('folders', data=config)
+
+    def patch_folders(self, config, id=None):
+        if(id):
+            return self.patch('folders/' + id, data=config)
+        else:
+            return self.patch('folders', data=config)
+    
+    def delete_folders(self, config, id):
+        return self.delete('folders/' + id, data=config)
+
+    def devices(self, id=None):
+        if(id):
+            return self.get('devices/' + id)
+        else:
+            return self.get('devices')
+
+    def put_devices(self, config, id=None):
+        if(id):
+            return self.put('devices/' + id, data=config)
+        else:
+            return self.put('devices', data=config)
+
+    def patch_devices(self, config, id=None):
+        if(id):
+            return self.patch('devices/' + id, data=config)
+        else:
+            return self.patch('devices', data=config)
+    
+    def delete_devices(self, config, id):
+        return self.delete('devices/' + id, data=config)
+    
+    def defaults_folder(self):
+        return self.get('defaults/folder')
+
+    def put_defaults_folder(self, config):
+        return self.put('defaults/folder', data=config)
+
+    def patch_defaults_folder(self, config):
+        return self.patch('defaults/folder', data=config)
+
+    def defaults_device(self):
+        return self.get('defaults/device')
+
+    def put_defaults_device(self, config):
+        return self.put('defaults/device', data=config)
+
+    def patch_defaults_device(self, config):
+        return self.patch('defaults/device', data=config)
+    
+    def defaults_ignores(self):
+        return self.get('defaults/ignores')
+    
+    def put_defaults_ignores(self, config):
+        return self.put('defaults/ignores', data=config)
+
+    def options(self):
+        return self.get('options')
+    
+    def put_options(self, config):
+        return self.put('options', data=config)
+    
+    def patch_options(self, config):
+        return self.patch('options', data=config)
+    
+    def ldap(self):
+        return self.get('ldap')
+    
+    def put_ldap(self, config):
+        return self.put('ldap', data=config)
+    
+    def patch_ldap(self, config):
+        return self.patch('ldap', data=config)
+
+    def gui(self):
+        return self.get('gui')
+    
+    def put_gui(self, config):
+        return self.put('gui', data=config)
+    
+    def patch_gui(self, config):
+        return self.patch('gui', data=config)
+
+class Cluster(BaseAPI):
+    """ HTTP REST endpoint for Cluster calls."""
+
+    prefix = '/rest/cluster/pending/'
+
+    def devices (self):
+        return self.get('devices') 
+
+    def delete_devices(self, device):
+        return self.delete('devices', params={'device': device})
+
+    def folders (self, device=None):
+        return self.get('devices', params={'device': device}) 
+        
+    def delete_folders(self, folder):
+        return self.delete('folders', params={'folder': folder})
+
+class Folder(BaseAPI):
+    """ HTTP REST endpoint for Folder calls."""
+
+    prefix = '/rest/folder/'
+
+    def errors(self, folder, page=None, perpage=None):
+        return self.get('errors', params={'folder': folder, 'page': page, 'perpage': perpage})
+
+    def versions(self):
+        return self.get('versions')
+    
+    def post_versions(self, folder):
+        return self.post('versions', params={'folder': folder})
 
 class Database(BaseAPI):
     """ HTTP REST endpoint for Database calls."""
@@ -1002,6 +1165,37 @@ class Misc(BaseAPI):
         """
         return self.get('report')
 
+class Debug(BaseAPI):
+    """ HTTP REST endpoint for Debug calls."""
+
+    prefix = '/rest/debug/'
+
+    def peerCompletion(self):
+        return self.get('peerCompletion')
+
+    def httpmetrics(self):
+        return self.get('httpmetrics')
+
+    def cpuprof(self):
+        return self.get('cpuprof')
+
+    def heapprof(self):
+        return self.get('heapprof')
+
+    def support(self):
+        return self.get('support')
+
+    def file(self, folder, file):
+        #params={'folder': folder, 'file': file}
+        return self.get('file', params={'folder': folder, 'file': file})
+
+class Noauth(BaseAPI):
+    """ HTTP REST endpoint for Noauth calls."""
+
+    prefix = '/rest/noauth/'
+
+    def health(self):
+        return self.get('health')
 
 class Syncthing(object):
     """ Default interface for interacting with Syncthing server instance.
@@ -1016,13 +1210,20 @@ class Syncthing(object):
 
         Attributes:
             system: instance of :class:`.System`.
+            config: instance of :class:`.Config`.
+            cluster: instance of :class:`.Cluster`.
+            folder: instance of :class:`.Folder`.
             database: instance of :class:`.Database`.
             stats: instance of :class:`.Statistics`.
             misc: instance of :class:`.Misc`.
+            debug: instance of :class:`.Debug`.
+            noauth:instance of :class:`.Noauth`.
 
         Note:
-            - attribute :attr:`.db` is an alias of :attr:`.database`
             - attribute :attr:`.sys` is an alias of :attr:`.system`
+            - attribute :attr:`.conf` is an alias of :attr:`.config`
+            - attribute :attr:`.db` is an alias of :attr:`.database`
+            
     """
 
     def __init__(self, api_key, host='localhost', port=8384,
@@ -1047,9 +1248,14 @@ class Syncthing(object):
         }
 
         self.system = self.sys = System(api_key, **kwargs)
+        self.config = self.conf = Config(api_key, **kwargs)
+        self.cluster = Cluster(api_key, **kwargs)
+        self.folder = Folder(api_key, **kwargs)
         self.database = self.db = Database(api_key, **kwargs)
         self.stats = Statistics(api_key, **kwargs)
         self.misc = Misc(api_key, **kwargs)
+        self.debug = Debug(api_key, **kwargs)
+        self.noauth = Noauth(api_key, **kwargs)
 
     def events(self, last_seen_id=None, filters=None, **kwargs):
         kw = dict(self.__kwargs)

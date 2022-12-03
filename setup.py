@@ -13,7 +13,7 @@ setup(
     license = 'The MIT License',
     install_requires = [
         'python-dateutil>=2.8.1,<=2.8.2',
-        'requests>=2.24.0,<=2.28.0'
+        'requests>=2.24.0,<=2.28.1'
     ],
     extras_require = {
         'dev': [
@@ -42,6 +42,8 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Topic :: System :: Archiving :: Mirroring'
     ],
 )
