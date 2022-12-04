@@ -604,105 +604,189 @@ class Config(BaseAPI):
     prefix = '/rest/config/'
 
     def config(self):
+        """ Returns the full config
+        """
         return self.get('')
 
     def put_config(self, config):
+        """ Replaces the entire object
+        """
         return self.put('', data=config)
 
     def restart_required(self):
+        """ Returns whether a restart of Syncthing is required for the current config to take effect
+        """
         return self.get('restart-required')
 
     def folders(self, id=None):
+        """ Returns all folders. Optionally supply an ID to return the folder matching that ID
+        """
         if(id):
             return self.get('folders/' + id)
         else:
             return self.get('folders')
 
     def put_folders(self, config, id=None):
+        """ Replaces the entire object
+        """
         if(id):
             return self.put('folders/' + id, data=config)
         else:
             return self.put('folders', data=config)
     
     def post_folders(self, config):
+        """ Add a single folder
+        """
         return self.post('folders', data=config)
 
     def patch_folders(self, config, id):
+        """ Replaces only the given child objects
+        """
         return self.patch('folders/' + id, data=config)
     
     def delete_folders(self, id):
+        """ Delete a single folder matching the given ID
+        """
         return self.delete('folders/' + id)
 
     def devices(self, id=None):
+        """ Returns all devices. Optionally specificy an ID to return a single object
+        """
         if(id):
             return self.get('devices/' + id)
         else:
             return self.get('devices')
 
     def put_devices(self, config, id=None):
+        """ Replaces the entire object
+        """
         if(id):
             return self.put('devices/' + id, data=config)
         else:
             return self.put('devices', data=config)
 
     def post_devices(self, config):
+        """ Add a single devices
+        """
         return self.post('devices', data=config)
 
     def patch_devices(self, config, id):
+        """ Replaces only the given child objects
+        """
         return self.patch('devices/' + id, data=config)
     
     def delete_devices(self, id):
+        """ Delete a device with a given ID
+        """
         return self.delete('devices/' + id)
     
     def defaults_folder(self):
+        """ Get default folder object
+
+            Returns:
+                dict
+        """
         return self.get('defaults/folder')
 
     def put_defaults_folder(self, config):
+        """ Replaces the entire object
+        """
         return self.put('defaults/folder', data=config)
 
     def patch_defaults_folder(self, config):
+        """ Replaces only the given child objects
+        """
         return self.patch('defaults/folder', data=config)
 
     def defaults_device(self):
+        """ Get default device object
+
+            Returns:
+                dict
+        """
         return self.get('defaults/device')
 
     def put_defaults_device(self, config):
+        """ Replaces the entire object
+        """
         return self.put('defaults/device', data=config)
 
     def patch_defaults_device(self, config):
+        """ Replaces only the given child objects
+        """
         return self.patch('defaults/device', data=config)
     
     def defaults_ignores(self):
+        """ Get default ignores object
+
+            Returns:
+                dict
+        """
         return self.get('defaults/ignores')
     
     def put_defaults_ignores(self, config):
+        """ Replaces the entire object
+        """
         return self.put('defaults/ignores', data=config)
 
     def options(self):
+        """ Get default options object
+        
+            Returns:
+                dict
+        """
         return self.get('options')
     
     def put_options(self, config):
+        """ Replaces the entire object
+        """
         return self.put('options', data=config)
     
     def patch_options(self, config):
+        """ Replaces only the given child objects
+        """
         return self.patch('options', data=config)
     
     def ldap(self):
+        """ Returns the LDAP object
+            
+            Returns:
+                dict
+        """
         return self.get('ldap')
     
     def put_ldap(self, config):
+        """ Replaces the entire object
+        """
         return self.put('ldap', data=config)
     
     def patch_ldap(self, config):
+        """ Replaces only the given child objects
+        """
         return self.patch('ldap', data=config)
 
     def gui(self):
+        """ Returns the GUI object
+
+            Returns:
+                dict
+        """
         return self.get('gui')
     
     def put_gui(self, config):
+        """ Replaces the entire object
+        """
         return self.put('gui', data=config)
     
     def patch_gui(self, config):
+        """ Replaces only the given child objects 
+            >>> s = _syncthing().config
+            >>> s.patch_gui({'address': '0.0.0.0:8384'})
+            ''
+            >>> gui = s.gui()
+            >>> '0.0.0.0' in gui['address']
+            True
+        """
         return self.patch('gui', data=config)
 
 class Cluster(BaseAPI):

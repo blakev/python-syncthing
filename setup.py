@@ -5,10 +5,10 @@ from setuptools import setup
 
 setup(
     name = 'syncthing',
-    version = '2.4.3',
+    version = '2.5.0',
     author = 'Blake VandeMerwe',
     author_email = 'blakev@null.net',
-    description = 'Python bindings to the Syncthing REST interface, targeting v0.14.44',
+    description = 'Python bindings to the Syncthing REST interface, targeting v1.22.0',
     url = 'https://github.com/blakev/python-syncthing',
     license = 'The MIT License',
     install_requires = [
