@@ -23,6 +23,7 @@ import json
 import logging
 import warnings
 from collections import namedtuple
+import collections.abc
 
 import requests
 from dateutil.parser import parse as dateutil_parser
@@ -199,7 +200,7 @@ class BaseAPI(object):
 
         if data is None:
             data = {}
-        assert isinstance(data, string_types) or isinstance(data, dict)
+        assert isinstance(data, string_types) or isinstance(data, dict) or isinstance (data, collections.abc.Sequence)
 
         if headers is None:
             headers = {}
@@ -606,7 +607,6 @@ class Config(BaseAPI):
         return self.get('')
 
     def put_config(self, config):
-        assert isinstance(config, dict)
         return self.put('', data=config)
 
     def restart_required(self):
@@ -623,15 +623,15 @@ class Config(BaseAPI):
             return self.put('folders/' + id, data=config)
         else:
             return self.put('folders', data=config)
-
-    def patch_folders(self, config, id=None):
-        if(id):
-            return self.patch('folders/' + id, data=config)
-        else:
-            return self.patch('folders', data=config)
     
-    def delete_folders(self, config, id):
-        return self.delete('folders/' + id, data=config)
+    def post_folders(self, config):
+        return self.post('folders', data=config)
+
+    def patch_folders(self, config, id):
+        return self.patch('folders/' + id, data=config)
+    
+    def delete_folders(self, id):
+        return self.delete('folders/' + id)
 
     def devices(self, id=None):
         if(id):
@@ -645,14 +645,14 @@ class Config(BaseAPI):
         else:
             return self.put('devices', data=config)
 
-    def patch_devices(self, config, id=None):
-        if(id):
-            return self.patch('devices/' + id, data=config)
-        else:
-            return self.patch('devices', data=config)
+    def post_devices(self, config):
+        return self.post('devices', data=config)
+
+    def patch_devices(self, config, id):
+        return self.patch('devices/' + id, data=config)
     
-    def delete_devices(self, config, id):
-        return self.delete('devices/' + id, data=config)
+    def delete_devices(self, id):
+        return self.delete('devices/' + id)
     
     def defaults_folder(self):
         return self.get('defaults/folder')
