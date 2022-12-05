@@ -1,7 +1,18 @@
-.. python-syncthing documentation master file, created by
-   sphinx-quickstart on Tue Jan  3 16:17:40 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to python-syncthing's documentation!
+============================================
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 python-syncthing
 ================
@@ -18,10 +29,15 @@ Reference
 
 - `Module`_
 - `System Endpoints`_
+- `Config Endpoints`_
+- `Cluster Endpoints`_
+- `Folder Endpoints`_
 - `Database Endpoints`_
 - `Events Endpoints`_
 - `Statistic Endpoints`_
 - `Misc. Endpoints`_
+- `Debug Endpoints`_
+- `Noauth Endpoints`_
 - `Running Tests`_
 - `License`_
 
@@ -36,6 +52,27 @@ System Endpoints
 ----------------
 
 .. autoclass:: syncthing.System()
+   :members:
+   :undoc-members:
+
+Config Endpoints
+----------------
+
+.. autoclass:: syncthing.Config()
+   :members:
+   :undoc-members:
+
+Cluster Endpoints
+-----------------
+
+.. autoclass:: syncthing.Cluster()
+   :members:
+   :undoc-members:
+
+Folder Endpoints
+----------------
+
+.. autoclass:: syncthing.Folder()
    :members:
    :undoc-members:
 
@@ -64,6 +101,20 @@ Misc. Endpoints
 ---------------
 
 .. autoclass:: syncthing.Misc()
+   :members:
+   :undoc-members:
+
+Debug Endpoints
+---------------
+
+.. autoclass:: syncthing.Debug()
+   :members:
+   :undoc-members:
+
+Noauth Endpoints
+----------------
+
+.. autoclass:: syncthing.Noauth()
    :members:
    :undoc-members:
 
