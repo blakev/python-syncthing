@@ -47,6 +47,7 @@ class TestBaseAPI(unittest.TestCase):
         s = Syncthing('')
         assert s.host is not None
         assert hasattr(s, 'system')
+        assert hasattr(s, 'config')
         assert hasattr(s, 'database')
         assert hasattr(s, 'stats')
         assert hasattr(s, 'misc')
