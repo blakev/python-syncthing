@@ -1,4 +1,4 @@
-Welcome to syncthing-python's documentation!
+Welcome to python-syncthing's documentation!
 ============================================
 
 .. toctree::
@@ -33,7 +33,7 @@ Reference
 - `Cluster Endpoints`_
 - `Folder Endpoints`_
 - `Database Endpoints`_
-- `Event Endpoints`_
+- `Events Endpoints`_
 - `Statistic Endpoints`_
 - `Misc. Endpoints`_
 - `Debug Endpoints`_

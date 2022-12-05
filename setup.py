@@ -18,7 +18,6 @@ setup(
     extras_require = {
         'dev': [
             'sphinx',
-            'sphinxcontrib-napoleon',
             'sphinx_rtd_theme'
         ]
     },
